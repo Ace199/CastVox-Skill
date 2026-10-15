@@ -1,4 +1,4 @@
-# CastVox · MakeSoundSkill
+# CastVox-Skill
 
 Agent-Native Voice Production — for Codex + MiniMax.
 
