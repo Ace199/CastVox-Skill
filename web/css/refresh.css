@@ -1,0 +1,186 @@
+/* V1.6 visual layer: structure and behavior remain in the existing modules. */
+:root{--paper:#f7f5ee;--white:#fffef9;--ink:#142034;--blue:#2454c4;--red:#e6535c;--line:1.5px solid var(--ink);--shadow:3px 4px 0 var(--ink);font-family:'Microsoft YaHei','PingFang SC',sans-serif}
+body{background:var(--paper)}
+button,.official-link{border-radius:0;transition:background-color .12s,box-shadow .12s}
+button:not(:disabled):hover,.official-link:hover{transform:none;box-shadow:2px 2px 0 var(--ink)}
+button:not(:disabled):active,.official-link:active{transform:none;box-shadow:inset 1px 1px 0 var(--ink)}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+header{height:56px;max-width:none;padding:4px 24px;gap:24px;border-bottom:2px solid var(--ink);background:var(--white);flex-wrap:nowrap}
+.studio-brand{gap:12px;flex-shrink:0}.brand-geometry{width:48px;height:44px;object-fit:contain}
+header h1{font-family:'Arial Black','Microsoft YaHei',sans-serif;font-size:24px;letter-spacing:-1.1px;line-height:1.15}
+header .eyebrow{font-size:9px;letter-spacing:1.5px;line-height:1.4}
+.brand-tagline{font-size:12px;white-space:nowrap;position:relative;padding-bottom:4px}
+.brand-tagline::after{content:'';position:absolute;bottom:0;left:20%;width:60%;height:3px;background:var(--yellow);transform:rotate(-3deg)}
+header .header-decoration{display:block;object-fit:contain;width:clamp(160px,25vw,350px);height:46px;margin-left:auto}
+.header-actions{margin-left:0;flex-shrink:0}.header-actions button{font-size:11px;padding:7px 12px;min-height:32px;background:transparent}
+#workspace{width:100%;max-width:1720px;margin:16px auto;padding:0 24px;gap:20px;grid-template-columns:minmax(0,1.46fr) minmax(0,1fr);align-items:stretch}
+#workspace>.project-panel,#workspace>.editor-panel{padding:18px;border:var(--line);box-shadow:var(--shadow);background:var(--white);position:relative}
+.section-heading{gap:12px}.project-panel>.section-heading{margin-bottom:10px}
+.project-panel .section-heading h2{font-size:21px;font-weight:800;letter-spacing:.2px}.project-panel .eyebrow{font-size:11px;color:var(--ink);letter-spacing:.4px}
+.project-panel .section-number{width:35px;min-width:35px;height:35px;font-size:23px;border:var(--line);box-shadow:2px 2px 0 var(--ink);background:var(--yellow);color:var(--ink)}
+.assignment-section .section-number{background:var(--red);color:white}
+#new-voice{background:var(--blue);color:white;padding:7px 12px;font-size:12px}#new-voice::before{content:'＋';font-size:17px;margin-right:5px;line-height:1}
+#workspace #voice-list.project-library{grid-template-columns:45px minmax(0,1fr);gap:10px;margin:8px 0 14px;padding:0;position:relative}
+.project-panel .library-scroll{padding:8px 7px 8px;max-height:none;scrollbar-gutter:auto;background:url('../assets/SoundMaker_UI_Assets/dots_pattern.png') right 12px top 16px / 44px auto no-repeat}
+.project-panel .library-labels{padding-top:8px}
+.project-panel .library-row,.project-panel .row-label{height:58px;margin-bottom:12px}
+.project-panel .library-row:last-child,.project-panel .row-label:last-child{margin-bottom:0}
+.row-label{font-size:13px;border-right:3px solid var(--avatar-other-bright);justify-content:flex-start}
+.row-label:first-child{border-color:var(--avatar-male-bright)}.row-label:nth-child(2){border-color:var(--avatar-female-bright)}
+.project-panel .project-voice-card{width:276px;flex-basis:276px;height:58px;background:var(--white);border:var(--line);box-shadow:2px 2px 0 #14203422}
+.project-panel .voice-body{height:55px;grid-template-columns:20px 44px 30px minmax(0,1fr);gap:7px;padding:4px 39px 4px 6px;overflow:visible}
+.project-panel .voice-label .voice-name{font-size:13px;font-weight:800}.card-preview-status{font-size:10px;line-height:1.4;color:var(--muted)}
+.project-panel .voice-preview,.project-panel .voice-settings{width:28px;height:28px;top:14px;background:var(--white);border:var(--line)}
+.project-panel .voice-preview{left:86px}.project-panel .voice-settings{right:7px}
+.voice-role-markers{font-size:10px;height:21px;min-width:18px}.voice-role-markers.is-unbound{height:17px;background:#e0e1e2}
+.project-voice-card.is-selected{outline:2px solid var(--blue);outline-offset:3px}
+.project-voice-card button.voice-body:not(:disabled):hover{background:transparent;box-shadow:none}
+.project-voice-card:hover{box-shadow:3px 3px 0 #14203444}
+.voice-delete{right:-7px;top:-8px;width:22px;height:22px;font-size:17px}
+/* The colored frame sits down-right; the figure projects above and to its left. */
+.avatar-frame{position:relative;display:block;width:44px;height:44px;isolation:isolate;overflow:visible;align-self:center}
+.voice-avatar-frame{grid-column:2}.role-avatar-frame{grid-column:1;grid-row:1/span 2}
+.avatar-frame::before{content:'';position:absolute;width:33px;height:33px;left:4px;bottom:2px;border:1px solid var(--ink);background:var(--avatar-pale);z-index:-1}
+.has-assignment .avatar-frame::before{background:var(--avatar-bright)}
+#workspace .avatar-frame img{position:absolute;width:41px;height:45px;max-width:none;left:0;bottom:1px;object-fit:contain;border:0;background:transparent;filter:none}
+#workspace .role-card .unknown-avatar{width:36px;height:36px;border:0;background:transparent url('../assets/SoundMaker_UI_Assets/unknow.png') center / 175% auto no-repeat}
+.assignment-section{padding-top:12px;border-top:var(--line)}.assignment-section>.section-heading{margin-bottom:9px}
+.assignment-section .defaults-heading h3,.assignment-section .requirements-heading h3{font-size:13px}
+.project-panel .assignment-section .defaults-section{margin-bottom:12px}
+.assignment-section .defaults-actions button{min-height:25px;padding:3px 10px}
+#save-defaults:not(:disabled){background:var(--blue);color:white}
+.assignment-section .default-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 10px;margin-top:5px}
+.default-card[data-slot=general]{grid-column:auto}
+.project-panel .assignment-section .default-target{height:48px;padding:5px 10px;padding-right:38px;display:block}
+.default-target strong{font-size:12px;flex-shrink:0}.default-card-name{margin:2px 0 0;font-size:12px;padding:0;min-width:0}
+.assignment-section .default-target small{position:absolute;top:4px;right:5px;margin:0;font-size:9px}
+.default-clear{right:7px;bottom:10px;font-size:9px;padding:0 4px}.default-clear:disabled{background:transparent;opacity:.5}
+.default-card{border:1px solid var(--ink)}
+.assignment-section .role-strip{padding:5px 4px 8px;gap:10px;max-height:none}
+.project-panel .assignment-section .role-card{width:190px;flex-basis:190px;height:64px;padding:7px 8px;grid-template-columns:44px minmax(0,1fr);background:var(--white);border:var(--line);gap:0 8px;box-shadow:none}
+.role-card.is-resolved{border-bottom:var(--line)}.role-card.target-selected{outline:2px solid var(--blue);outline-offset:2px;box-shadow:inset 0 0 0 1px var(--blue)!important}
+.role-card .role-name{font-size:13px;font-weight:800}.role-card .role-binding{font-size:10px;margin-top:2px}
+.project-panel .completion{background:var(--white);margin-top:3px;padding-top:8px;border-top:var(--line)}
+.project-panel #complete-settings{background:var(--yellow);color:var(--ink);font-size:22px;min-height:44px;padding:6px 14px;margin:5px 0;box-shadow:2px 3px 0 var(--ink);letter-spacing:2px}
+.project-panel #complete-settings:disabled{background:#f8edb6;color:#77745f;border-color:#aaa68d;box-shadow:none}
+.project-panel #complete-settings:not(:disabled)::before{content:'';float:left;width:24px;height:26px;background:url('../assets/SoundMaker_UI_Assets/waveform_icon.png') center / contain no-repeat}
+#reload-config{color:var(--muted)}
+.editor-panel .tabs{gap:6px;padding-bottom:11px;margin-bottom:16px;border-bottom:var(--line)}
+.editor-panel .tabs button{font-size:12px;padding:10px 3px;min-height:39px}
+.tabs [aria-selected=true]{background:var(--blue);color:white;box-shadow:2px 2px 0 var(--ink)}
+.tool-panel h2{font-size:21px;font-weight:800}.add-content>.section-heading,.settings-content>.section-heading{position:relative;padding-bottom:12px}
+.add-content>.section-heading::after,.settings-content>.section-heading::after{content:'';position:absolute;width:68px;height:3px;left:0;bottom:0;background:var(--yellow)}
+#panel-add .section-heading{margin-bottom:22px}.tool-panel .eyebrow{font-size:10px;letter-spacing:1px}
+#panel-add .identity-grid{gap:20px 14px}#panel-add label,.tool-panel label{font-size:12px;margin-bottom:7px}
+#panel-add input,#panel-add select,#settings-editor input,#settings-editor select{min-height:38px;padding:8px 10px;font-size:12px;background:var(--white);border:var(--line)}
+.editor-panel .text-button{font-size:10px;color:var(--blue)}
+#panel-add .provider-link{margin-top:20px;margin-bottom:20px}.provider-link .official-link{color:var(--blue);background:var(--white)}
+#panel-add .add-content{position:relative;padding-bottom:65px;background:url('../assets/SoundMaker_UI_Assets/corner_geometry.png') right bottom / 95px auto no-repeat;scrollbar-gutter:auto}
+#panel-add .add-footer{border-top:var(--line);padding-top:12px;gap:10px}#panel-add .add-footer button{min-height:40px}
+.settings-content{scrollbar-gutter:auto}.source-card{background:#f0eee7;border:1px solid #b4b8bc;padding:10px}
+.source-card .source-grid{gap:10px 14px}.source-card dd{font-family:Consolas,monospace;font-size:11px}
+#settings-editor .parameter-control{border:1px solid #b4b8bc;background:var(--white);padding:8px}
+#settings-editor .parameter-control:disabled{background:#efeee8}.settings-footer{padding-top:12px}.settings-footer #save-settings{background:var(--yellow);color:var(--ink)}
+#panel-tools{background:url('../assets/SoundMaker_UI_Assets/corner_geometry.png') right bottom / 110px auto no-repeat;flex:1}
+@media(min-width:951px){
+  #workspace{height:calc(100dvh - 88px)}
+  #workspace>.project-panel,#workspace>.editor-panel,#workspace>.editor-panel:has(.tool-panel:not([hidden])){height:100%;max-height:100%;min-height:0}
+  .project-panel{display:flex;flex-direction:column;overflow-y:auto}
+  .project-panel>.section-heading,.project-panel>#voice-list,.project-panel>.assignment-section,.project-panel>.completion{flex-shrink:0}
+  .project-panel .completion{margin-top:auto}
+}
+@media(min-width:951px) and (max-height:800px){
+  #workspace{margin:12px auto 16px;height:calc(100dvh - 84px);gap:16px}
+  #workspace>.project-panel,#workspace>.editor-panel{padding:12px 14px}
+  .project-panel .section-heading h2{font-size:19px}.project-panel .section-number{width:30px;min-width:30px;height:30px;font-size:20px}
+  .project-panel>.section-heading{margin-bottom:4px}
+  #workspace #voice-list.project-library{margin:4px 0 8px}
+  .project-panel .library-row,.project-panel .row-label{height:50px;margin-bottom:8px}
+  .project-panel .project-voice-card{height:50px}.project-panel .voice-body{height:47px}
+  .project-panel .voice-preview,.project-panel .voice-settings{top:10px}
+  .assignment-section{padding-top:8px}.assignment-section>.section-heading{margin-bottom:5px}
+  .project-panel .assignment-section .defaults-section{margin-bottom:8px}
+  .project-panel .assignment-section .default-target{height:48px}
+  .default-clear{bottom:8px}.project-panel .assignment-section .role-card{height:58px;padding-top:4px;padding-bottom:4px}
+  .project-panel #complete-settings{min-height:38px;font-size:20px;padding:4px 12px}
+  .editor-panel .tabs{margin-bottom:10px;padding-bottom:8px}.editor-panel .tabs button{min-height:34px;padding:7px 3px}
+  #panel-add .section-heading{margin-bottom:16px}#panel-add .identity-grid{gap:15px 12px}
+  #panel-add .add-content{padding-bottom:20px;background-size:66px auto}
+  .settings-content>.section-heading{padding-bottom:8px;margin-bottom:8px}
+  #settings-editor .parameter-control{padding:4px 6px}.source-card .source-grid{gap:5px 12px}
+  #settings-editor input,#settings-editor select{min-height:32px;padding:5px 8px}.settings-footer{padding-top:8px}
+}
+@media(max-width:1100px){.brand-tagline{display:none}header .header-decoration{width:230px}.project-panel .assignment-section .role-card{width:177px;flex-basis:177px}}
+@media(max-width:950px){
+  header{padding:5px 16px;gap:12px}header .header-decoration{width:180px}header h1{font-size:22px}
+  #workspace{grid-template-columns:minmax(0,1fr);height:auto;padding:0 16px;margin:16px auto;gap:18px}
+  #workspace>.project-panel,#workspace>.editor-panel{height:auto;max-height:none;padding:16px}
+  .project-panel .completion{margin-top:8px}.editor-panel{min-height:450px}
+  #panel-add .add-content{padding-bottom:34px}.add-footer,.settings-footer{position:static}
+}
+@media(max-width:580px){
+  header{height:60px;padding:6px 12px}.brand-geometry{width:36px;height:38px}.studio-brand{gap:8px}
+  header h1{font-size:19px}header .eyebrow{font-size:8px;letter-spacing:.5px}header .header-decoration,.brand-tagline{display:none}
+  .header-actions{width:auto;margin-left:auto}.header-actions button{font-size:9px;padding:5px 7px}
+  #workspace{padding:0 10px;gap:16px;margin:12px auto}
+  #workspace>.project-panel,#workspace>.editor-panel{padding:12px}
+  .project-panel .section-heading h2{font-size:17px}.project-panel .eyebrow{font-size:9px}.project-panel .section-number{width:29px;min-width:29px;height:30px;font-size:20px}
+  .section-heading{gap:8px}#new-voice{padding:5px 7px;font-size:10px}#new-voice::before{display:none}
+  #workspace #voice-list.project-library{grid-template-columns:32px minmax(0,1fr);gap:4px;margin-bottom:10px}
+  .row-label{font-size:11px}.project-panel .project-voice-card{width:246px;flex-basis:246px}
+  .project-panel .assignment-section .default-target{gap:5px;padding:5px 7px;padding-right:30px;height:50px;display:block}
+  .default-target strong,.default-card-name{font-size:10px}.default-card-name{margin-top:3px}.default-clear{font-size:8px;right:3px;bottom:7px}
+  .assignment-section .default-target small{position:absolute;top:2px;right:3px;font-size:8px}
+  .assignment-section .default-cards{gap:6px}.project-panel .assignment-section .default-target{height:60px;padding-right:7px}.default-clear{bottom:3px}.default-card-name{padding-right:24px}
+  #panel-add .identity-grid{gap:14px 10px}#panel-add input,#panel-add select{padding:7px 6px;font-size:11px}
+  .tool-panel h2{font-size:18px}.editor-panel .tabs button{font-size:10px}
+  .settings-footer .save-actions button{padding:7px 9px;font-size:11px}
+  .brand-tagline{display:none}
+}
+@media(prefers-reduced-motion:reduce){button,.official-link{transition:none}}
+
+/* Role cards share the voice-card rhythm; the supplied unknown artwork is cropped inside its baked-in border. */
+#workspace .role-card .unknown-avatar{width:44px;height:44px;clip-path:inset(12%);align-self:center}
+.project-panel .assignment-section .role-card{height:58px;padding:5px 8px;grid-template-rows:1fr 1fr;box-shadow:2px 2px 0 #14203422;text-align:left}
+.role-card .role-name{align-self:end;line-height:18px;margin:0}
+.role-card .role-binding{align-self:start;line-height:14px;margin:0}
+.project-panel .assignment-section .role-card:hover{box-shadow:3px 3px 0 #14203444}
+@media(min-width:951px) and (max-height:800px){.project-panel .assignment-section .role-card{height:50px;padding:2px 8px}}
+/* The supplied 1774 × 887 artwork always keeps its original 2:1 ratio. */
+.role-detail{width:min(600px,calc(100vw - 16px),calc(200dvh - 32px));height:auto;aspect-ratio:2 / 1;max-height:none;padding:0;border:0;background:transparent;box-shadow:none;clip-path:none;overflow:visible;isolation:isolate}
+.role-detail::before{content:'';position:absolute;inset:0;z-index:-1;background:url('../assets/SoundMaker_UI_Assets/moreinfo.png') center / contain no-repeat;pointer-events:none}
+.role-detail.tip-right::before{transform:scaleX(-1)}
+.role-detail-content{position:absolute;top:19%;bottom:24%;left:13%;right:19%;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;padding-right:5px;overflow-wrap:anywhere}
+.role-detail.tip-right .role-detail-content{left:19%;right:13%}
+.role-detail h3{font-size:18px;line-height:1.3;margin:0 0 8px}
+.role-detail strong{font-size:12px;line-height:1.4}
+.role-detail p{font-size:13px;line-height:1.5;margin:3px 0 9px}
+.role-detail .role-detail-close{position:absolute;top:14%;right:10%;width:26px;height:26px;min-height:0;padding:0;border:0;background:transparent;box-shadow:none;font-size:24px;line-height:24px;color:var(--ink)}
+.role-detail .role-detail-close:hover{color:#cf4148;box-shadow:none;background:transparent}
+@media(max-width:480px){.role-detail h3{font-size:15px;margin-bottom:6px}.role-detail p{font-size:12px}.role-detail .role-detail-close{width:22px;height:22px;font-size:20px;line-height:20px;top:13%}}
+.assignment-section .default-clear{top:3px;right:4px;bottom:auto;width:24px;height:24px;min-height:24px;padding:0;border:0;background:transparent;box-shadow:none;font-size:18px;line-height:22px;color:var(--ink)}
+.assignment-section .default-clear:hover:not(:disabled){color:#cf4148;background:transparent;transform:none;box-shadow:none}
+.assignment-section .default-clear:disabled{background:transparent;opacity:.35}
+.assignment-section .default-target small{top:auto;bottom:3px;right:6px}
+/* Inactive tools stay neutral; only the selected tool displays its color. */
+.editor-panel #tab-add[aria-selected=true]{background:var(--blue);color:#fff}
+.editor-panel #tab-settings[aria-selected=true]{background:var(--red);color:var(--ink)}
+.editor-panel #tab-tools[aria-selected=true]{background:var(--yellow);color:var(--ink)}
+.editor-panel .tabs [aria-selected=false]{background:#e4e4e0;color:var(--ink);box-shadow:none}
+.editor-panel .tabs [aria-selected=true]{box-shadow:3px 3px 0 var(--ink);border-width:2px}
+.editor-panel .tabs button:focus-visible{outline-color:var(--ink)}
+/* A symmetric safe area keeps text clear of decoration even when the tail is mirrored. */
+.role-detail{width:min(660px,calc(100vw - 16px),calc(200dvh - 32px))}
+.role-detail .role-detail-content,.role-detail.tip-right .role-detail-content{left:21%;right:21%;top:20%;bottom:24%;padding-right:4px}
+.role-detail h3{padding-bottom:9px;border-bottom:1px solid #14203433;margin-bottom:12px;font-size:20px}
+.role-detail-columns{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.role-detail-section strong{display:block;font-size:12px;color:#555962;margin-bottom:6px}
+.role-detail-section p{margin:0;font-size:13px;line-height:1.7}
+.role-detail .role-detail-close{top:18%;right:15%;font-size:20px}
+@media(max-width:580px){.role-detail-columns{grid-template-columns:1fr;gap:12px}.role-detail h3{font-size:16px;margin-bottom:9px;padding-bottom:6px}.role-detail-section p{font-size:12px;line-height:1.6}.role-detail-section strong{margin-bottom:3px}.role-detail .role-detail-close{right:12%;top:16%}}
+/* Defaults add an outer color frame without shifting card content. */
+.project-voice-card .default-voice-outline{position:absolute;inset:calc(-3px - var(--outline-layer) * 4px);border-style:solid;border-width:2px 4px 4px 2px;pointer-events:none;z-index:2}
+.default-voice-outline[data-slot=general]{border-color:#e4bc24}
+.default-voice-outline[data-slot=male]{border-color:#36bdb5}
+.default-voice-outline[data-slot=female]{border-color:#ee7097}
+.project-voice-card.is-selected:has(.default-voice-outline){outline-offset:-3px}

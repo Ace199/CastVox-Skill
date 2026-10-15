@@ -1,0 +1,111 @@
+{
+  "status": "PASS",
+  "checks": [
+    {
+      "name": "01 initial state: no voice, no model, default checked, alias unchecked",
+      "status": "PASS"
+    },
+    {
+      "name": "01 missing voice blocks submission",
+      "status": "PASS"
+    },
+    {
+      "name": "01 missing model blocks submission",
+      "status": "PASS"
+    },
+    {
+      "name": "01 direct default without alias",
+      "status": "PASS"
+    },
+    {
+      "name": "01 save only leaves task awaiting answer",
+      "status": "PASS"
+    },
+    {
+      "name": "01 task only makes no persistence request",
+      "status": "PASS"
+    },
+    {
+      "name": "01 alias requires name; alias-only does not change default",
+      "status": "PASS"
+    },
+    {
+      "name": "01 user text renders as text, not markup",
+      "status": "PASS"
+    },
+    {
+      "name": "01 empty project library has actionable empty state",
+      "status": "PASS"
+    },
+    {
+      "name": "tabs support keyboard navigation",
+      "status": "PASS"
+    },
+    {
+      "name": "02 prefilter and missing alias shown; persistence not selected",
+      "status": "PASS"
+    },
+    {
+      "name": "02 explicit task-only replacement is limited to p002",
+      "status": "PASS"
+    },
+    {
+      "name": "02 alias repair and default remain independent",
+      "status": "PASS"
+    },
+    {
+      "name": "02 removing filter permits explicit final override",
+      "status": "PASS"
+    },
+    {
+      "name": "conflict demo retains edits and prevents success preview",
+      "status": "PASS"
+    },
+    {
+      "name": "timeout demo shows persistent answer + manual resume, no message sending",
+      "status": "PASS"
+    },
+    {
+      "name": "refresh resets prototype rather than persisting answers",
+      "status": "PASS"
+    },
+    {
+      "name": "01 layout at 1440px has no horizontal overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "02 layout at 1440px has no horizontal overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "01 layout at 390px has no horizontal overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "02 layout at 390px has no horizontal overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "01 layout at 320px has no horizontal overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "02 layout at 320px has no horizontal overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "no page JavaScript errors or external HTTP requests",
+      "status": "PASS"
+    }
+  ],
+  "page_errors": [],
+  "external_requests": [],
+  "screenshots": [
+    "01-desktop.png",
+    "02-desktop.png",
+    "01-mobile.png",
+    "02-mobile.png"
+  ],
+  "browser": "151.0.7922.34",
+  "completed_at": "2026-10-14T16:01:27.305Z"
+}

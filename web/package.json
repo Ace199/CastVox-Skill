@@ -1,0 +1,11 @@
+{
+  "name": "makesound-voice-studio-prototype",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "python ../studio_server.py --port 8766",
+    "start:mock": "python ../studio_server.py --port 8766 --config-dir tests/fixtures/providers",
+    "test": "node --test tests/v16.test.js",
+    "test:browser": "node tests/browser-v16.cjs"
+  }
+}

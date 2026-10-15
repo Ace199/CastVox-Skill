@@ -1,0 +1,172 @@
+/* V1.6 iteration: retain the existing palette, short cards and original portraits. */
+:root{--blue:#2454c4}
+/* Keep explanatory copy out of the working grid; show only actionable state. */
+#operation-status:empty,#operation-error:empty,#complete-reason:empty,#defaults-status:empty,#provider-help:empty,#provider-support:empty,#model-help:empty,#preview-update-status:empty,.default-target small:empty{display:none}
+.project-panel #voice-list.project-library{margin-top:18px;margin-bottom:16px}
+.project-panel .defaults-section{padding:16px 0;margin:0 0 16px}
+.project-panel .default-target{height:64px;padding:9px 10px}
+.default-card-name{padding-right:22px}
+.project-panel .requirements-section{margin-top:0}
+.project-panel .completion{margin-top:12px;padding-top:12px}
+.defaults-actions{min-height:28px}
+#reload-config{margin-top:8px}
+button,input,select,.official-link{border-radius:0}
+header{padding-top:16px;padding-bottom:16px}.header-decoration{width:92px;height:42px}h1{font-size:27px}
+#workspace{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:22px;margin-top:22px}
+.panel{padding:18px}.section-heading{margin-bottom:10px}.section-heading h2{font-size:20px}.section-number{min-width:36px;height:36px;font-size:19px}
+#project-location{font-size:11px}.library-note{font-size:11px;margin:4px 0 12px}
+#voice-list.project-library{margin:10px 0 4px;grid-template-columns:30px 42px minmax(0,1fr)}
+.library-scroll{padding:12px 10px 8px;max-height:230px;scrollbar-gutter:stable}
+.library-labels{padding-top:12px}.library-number{padding-top:9px}.project-voice-card{width:240px;flex-basis:240px;border-radius:0}
+.voice-label{grid-column:4;min-width:0;display:block;align-self:center}.voice-label .voice-name{display:block;font-size:12px;line-height:1.4;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card-preview-status{font-size:9px;line-height:1.2;margin:2px 0 0;white-space:nowrap;color:var(--muted)}
+.project-voice-card .voice-avatar{background:var(--paper)}.voice-role-markers{background:var(--yellow)}
+.voice-delete{position:absolute;right:-9px;top:-11px;z-index:2;width:24px;height:24px;padding:0;background:var(--red);color:white;border:var(--line);font-size:19px;line-height:18px;opacity:0;visibility:hidden;pointer-events:none;box-shadow:none}
+.project-voice-card.delete-visible .voice-delete,.project-voice-card:has(:focus-visible) .voice-delete{opacity:1;visibility:visible;pointer-events:auto}
+.project-voice-card .voice-delete:not(:disabled):hover{background:var(--red);color:white;transform:none;box-shadow:none}
+.project-voice-card.is-selected{outline-color:var(--blue)}
+.defaults-section{border-top:var(--line);border-bottom:var(--line);padding:12px 0;margin:10px 0}
+.defaults-heading{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.defaults-heading h3{font-size:15px}
+.default-first,.default-second{display:grid;gap:12px}.default-second{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.default-slot{min-width:0}.default-slot label{font-size:12px;margin:8px 0 3px}.default-select-row{display:flex;align-items:center;gap:6px;min-width:0}.default-select-row select{font-size:12px;padding:6px 8px;min-width:0;flex:1;height:35px}.default-select-row button{padding:5px;font-size:11px;flex-shrink:0}
+.default-slot small{font-size:10px}.defaults-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:9px}.defaults-actions button{font-size:11px;padding:5px 8px}.defaults-actions .text-button{padding:4px 0}#defaults-status{font-size:10px}
+.requirements-section{border-top:0;margin-top:10px;padding-top:0}.requirements-section .section-heading{margin-bottom:7px}.role-strip{border-left:0;padding:4px 4px 8px;max-height:94px;scrollbar-gutter:stable}
+.role-card{height:68px;width:174px;flex-basis:174px;background:#e5e4dd;color:var(--ink);padding:8px}.role-card:not(:disabled):hover{background:#e5e4dd;color:var(--ink)}
+.role-card.is-assigned,.role-card.is-assigned:not(:disabled):hover{background:var(--white);color:var(--ink)}.role-card.is-resolved{border-bottom:4px solid var(--ink)}
+.role-card.target-selected{outline:3px solid var(--blue);outline-offset:1px;box-shadow:inset 0 0 0 1px var(--blue)}.role-avatar{background:var(--paper)}.role-card .role-binding{color:var(--ink);font-size:10px}
+#role-context{font-size:11px;margin:5px 0 8px}.completion{background:var(--white);padding-top:10px;margin-top:8px}
+#complete-settings{font-size:21px;padding:11px;margin:5px 0 8px;box-shadow:3px 3px 0 var(--ink)}#complete-settings:disabled{box-shadow:none}
+.completion .small{font-size:10px}#operation-status{font-size:11px;margin-top:6px}#operation-error{font-size:11px}#reload-config{font-size:10px;padding:2px 0}
+#undo-area{display:flex;align-items:center;gap:9px;background:#fff3b8;border:var(--line);padding:7px;font-size:11px;margin-bottom:8px;flex-wrap:wrap}#undo-area button{font-size:11px}
+.editor-panel{min-height:0}.tabs{gap:5px;margin-bottom:14px;padding-bottom:12px;flex-shrink:0}.tabs button{font-size:12px;min-width:0;padding:9px 4px}.tabs [aria-selected=true]{background:var(--blue);color:white;box-shadow:3px 3px 0 var(--ink)}
+.tool-panel{min-width:0;min-height:0}.tool-panel>.section-heading .eyebrow{margin-left:auto}.tool-panel h2{font-size:20px}.tool-panel label{font-size:12px;margin-top:12px}.tool-panel input,.tool-panel select{font-size:13px;padding:9px;min-width:0}.tool-panel small{font-size:10px}
+.identity-grid{display:block}.identity-grid>div{min-width:0}.editor-panel #provider-help,.editor-panel #provider-support{font-size:11px}.editor-panel #model-help{font-size:10px}.editor-panel .text-button{font-size:11px}.provider-link{margin:14px 0}
+.tool-panel .save-actions{margin:14px 0 10px}.tool-panel .save-actions button{font-size:12px;min-width:0}.source-details{margin:14px 0}.source-details summary{font-size:12px}
+.source-grid{display:grid;grid-template-columns:86px minmax(0,1fr);gap:4px 10px;margin:8px 0;font-size:11px}.source-grid dt{font-weight:700}.source-grid dd{margin:0;overflow-wrap:anywhere}
+.parameter-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:14px}.parameter-block{min-width:0}.parameter-control{border:var(--line);padding:8px;min-width:0;margin:0}.parameter-control legend{font-weight:700;font-size:13px;padding:0 5px}
+.parameter-control input[type=range]{width:100%;height:30px;padding:0;border:0;accent-color:var(--blue);background:transparent}.parameter-value{display:flex;gap:5px;align-items:center}.parameter-value input{width:100%;flex:1;min-width:0;padding:7px!important;font-size:12px}.parameter-value button{font-size:10px;padding:7px 5px;flex-shrink:0}.parameter-help{font-size:10px!important;margin-top:5px}
+.parameter-control:disabled{background:#eeeDE7}.settings-preview{border-top:var(--line);border-bottom:var(--line);padding:10px 0;margin-top:14px}.settings-preview h3{font-size:14px}.preview-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.preview-actions button{font-size:11px}.settings-preview .small{font-size:10px}#preview-update-status{margin-top:6px}.danger{color:#a12630}
+#settings-dirty{margin-left:auto}.debug-preview-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}.debug-preview-controls label{margin:0}.debug-preview-controls select{width:auto;max-width:230px}.debug-preview-controls button{font-size:12px}
+@media(min-width:951px){.project-panel,.editor-panel{max-height:calc(100dvh - 145px);overflow-y:auto;scrollbar-gutter:stable}.editor-panel{display:flex;flex-direction:column}.tool-panel{overflow-y:auto;padding:0 3px 6px}.completion{position:sticky;bottom:-18px;z-index:3}.project-panel .requirements-section{position:relative}.editor-panel .identity-grid{display:block}.tool-panel input,.tool-panel select{min-height:39px}}
+@media(max-width:950px){#workspace{grid-template-columns:minmax(0,1fr)}.project-panel,.editor-panel{max-height:none;overflow:visible}.completion{position:static}.tool-panel{overflow:visible}.editor-panel{min-height:350px}}
+@media(max-width:480px){header{padding:16px}h1{font-size:24px}.panel{padding:14px}.section-heading h2{font-size:18px}.section-number{min-width:32px;height:32px}.tabs button{font-size:11px;padding:9px 3px}.default-second{gap:8px}.default-select-row{gap:3px}.default-select-row select{padding:5px 3px;font-size:11px}.default-select-row button{font-size:10px;padding:4px 3px}.parameter-grid{grid-template-columns:minmax(0,1fr)}.source-grid{grid-template-columns:72px minmax(0,1fr)}#voice-list.project-library{grid-template-columns:25px 34px minmax(0,1fr)}.default-first label,.default-second label{font-size:11px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+.default-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:8px}.default-card{position:relative;min-width:0;border:var(--line);background:var(--yellow)}.default-card[data-slot=male]{background:var(--voice-male)}.default-card[data-slot=female]{background:var(--voice-female)}.default-target{display:block;width:100%;min-width:0;height:72px;border:0;padding:6px 8px;text-align:left;background:transparent;box-shadow:none}.default-target strong{display:block;font-size:12px;line-height:1.4}.default-card-name{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}.default-target small{font-size:9px;color:var(--ink);margin-top:2px}.default-clear{position:absolute;right:4px;bottom:3px;background:transparent;font-size:9px;padding:0 3px;border:1px solid var(--ink);box-shadow:none}.default-target[aria-pressed=true]{outline:3px solid var(--blue);outline-offset:2px}.default-card .default-target:not(:disabled):hover{transform:none;box-shadow:none;background:transparent}.default-card .default-clear:not(:disabled):hover{transform:none;box-shadow:none;background:var(--paper)}.default-ineligible .voice-body{opacity:.6}.default-ineligible .voice-body:disabled{background:transparent;color:var(--ink)}
+@media(max-width:480px){.default-cards{gap:6px}.default-target{padding:6px;height:70px}.default-target strong{font-size:11px}.default-card-name{font-size:10px}.default-target small{font-size:9px}.default-clear{font-size:9px}}
+/* Keep the role strip in normal flow: the CTA must never cover its hit targets. */
+.completion{position:static}
+@media(min-width:951px){.project-panel,.editor-panel{max-height:calc(100dvh - 125px)}.project-panel{padding-top:14px;padding-bottom:14px}.project-panel>.section-heading{margin-bottom:6px}#voice-list.project-library{margin-top:6px}.project-panel .library-scroll{padding-top:10px;padding-bottom:6px;max-height:192px}.project-panel .library-labels{padding-top:10px}.project-panel .library-row{height:48px;margin-bottom:8px}.project-panel .row-label{height:48px;margin-bottom:8px}.project-panel .project-voice-card{height:48px}.project-panel .voice-body{height:44px;padding-top:4px;padding-bottom:4px}.project-panel .voice-preview,.project-panel .voice-settings{top:8px}.project-panel .library-note{margin-bottom:7px}.project-panel .defaults-section{padding:8px 0;margin:7px 0}.project-panel .default-target{height:62px}.project-panel .defaults-actions{margin-top:6px}.project-panel .requirements-section{margin-top:7px}.project-panel .completion{padding-top:7px;margin-top:5px}#role-context{margin-bottom:5px}.project-panel #complete-settings{padding:9px;margin-bottom:6px}}
+/* A single assignment block groups project defaults and current-task targets. */
+.assignment-section{border-top:var(--line);padding-top:12px;min-width:0}
+.assignment-section>.section-heading{margin-bottom:10px}
+.project-panel .assignment-section .defaults-section{border:0;padding:0;margin:0 0 12px}
+.assignment-section .defaults-heading{justify-content:space-between;gap:8px;min-height:28px}
+.project-panel .assignment-section .defaults-actions{margin:0;min-height:0;gap:10px;flex-wrap:nowrap}
+.assignment-section .defaults-heading h3,.assignment-section .requirements-heading h3{font-size:13px;line-height:1.4;margin:0}
+.assignment-section .defaults-actions button{font-size:11px;padding:3px 8px;min-height:26px}
+.assignment-section .default-cards{margin-top:5px;gap:8px}
+.project-panel .assignment-section .default-target{height:54px;padding:6px 8px}
+.assignment-section .default-target small{position:absolute;right:7px;top:5px;font-size:8px}
+.assignment-section #defaults-status:not(:empty){display:block;margin-top:4px}
+.project-panel .assignment-section .requirements-section{padding:0;margin:0;border:0}
+.requirements-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;flex-wrap:wrap}
+.assignment-section #role-context{margin:0;font-size:10px;color:var(--muted)}
+.assignment-section .role-strip{padding-top:4px;padding-bottom:5px;max-height:82px}
+.assignment-section .role-card{height:60px;padding:6px 8px}
+@media(max-width:480px){.assignment-section .default-cards{gap:6px}.project-panel .assignment-section .default-target{padding:6px;height:56px}.assignment-section .defaults-heading h3,.assignment-section .requirements-heading h3{font-size:12px}.assignment-section .default-target small{top:2px;right:3px;font-size:8px}}
+/* Compact settings: one source summary and a non-overlapping action footer. */
+#settings-editor{min-width:0}
+.settings-content{min-width:0}
+.settings-content>.section-heading{margin-bottom:8px}
+.settings-identity{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:10px}
+.settings-identity>div{min-width:0}
+#settings-editor label{margin:0 0 5px}
+#settings-editor input,#settings-editor select{min-height:34px;padding:6px 8px}
+#settings-editor .parameter-grid{margin-top:10px;gap:8px}
+#settings-editor .parameter-control{padding:5px 7px}
+#settings-editor input[type=range]{min-height:0;height:24px;padding:0}
+#settings-editor .parameter-help{margin-top:3px}
+.source-card{border:var(--line);padding:9px 10px;margin-top:10px;background:var(--paper)}
+.source-card h3{display:flex;align-items:center;justify-content:space-between;font-size:12px}
+.source-card h3 span{font-size:10px;font-weight:400;color:var(--muted)}
+.source-card .source-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px;margin:8px 0 0}
+.source-grid>div{min-width:0}.source-card dt{font-size:10px;color:var(--muted);font-weight:400;margin-bottom:2px}.source-card dd{font-size:11px;line-height:1.4;overflow-wrap:anywhere}
+#settings-editor .settings-preview{padding:8px 0;margin-top:10px;border-bottom:0}
+#settings-editor .preview-actions{margin-top:6px}
+.settings-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:var(--line);padding:10px 0 0;background:var(--white);flex-shrink:0}
+#settings-editor .settings-footer .save-actions{display:flex;gap:8px;margin:0}
+.settings-footer .save-actions button{padding:8px 14px;min-height:36px}
+#settings-editor .settings-footer>.text-button{font-size:11px;padding:8px 0}
+@media(min-width:951px){.editor-panel:has(#panel-settings:not([hidden])){height:calc(100dvh - 145px);overflow:hidden}#panel-settings:not([hidden]){display:flex;flex-direction:column;flex:1;overflow:hidden;padding-bottom:0}#settings-editor:not([hidden]){display:flex;flex-direction:column;flex:1;min-height:0}.settings-content{overflow-y:auto;min-height:0;flex:1;padding:0 2px 8px;scrollbar-gutter:stable}.settings-footer{margin-top:0}}
+@media(max-width:480px){#settings-editor .parameter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#settings-editor .parameter-value{flex-wrap:wrap;gap:3px}#settings-editor .parameter-value input{flex-basis:100%;width:100%}#settings-editor .parameter-value button{padding:3px 5px;min-height:26px}.settings-footer{position:sticky;bottom:0;z-index:2;padding-bottom:6px}.settings-footer .save-actions button{padding:8px 10px}.source-card .source-grid{gap:7px 10px}}
+@media(max-width:950px){#settings-editor .settings-footer{position:static}}
+/* Add form follows the same compact grid and separate desktop action row. */
+#panel-add .add-content{min-width:0}
+#panel-add .identity-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:"provider model" "name category" "id id";gap:12px 10px}
+#panel-add .provider-field{grid-area:provider}#panel-add .model-field{grid-area:model}#panel-add .name-field{grid-area:name}#panel-add .category-field{grid-area:category}#panel-add .id-field{grid-area:id}
+#panel-add label{margin:0 0 5px}#panel-add input,#panel-add select{min-height:36px;padding:7px 8px;font-size:12px}
+#panel-add .section-heading{margin-bottom:14px}
+#panel-add #reload-providers{margin-top:4px;padding:2px 0;font-size:10px}
+#panel-add .provider-link{margin:12px 0}
+#panel-add .provider-link .official-link{font-size:12px;padding:7px 10px}
+#panel-add .add-footer{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:8px;border-top:var(--line);padding-top:10px;margin:0;flex-shrink:0;background:var(--white)}
+#panel-add .add-footer button{min-height:38px;padding:8px 10px;font-size:12px}
+@media(min-width:951px){.editor-panel:has(#panel-add:not([hidden])){height:calc(100dvh - 145px);overflow:hidden}#panel-add:not([hidden]){display:flex;flex-direction:column;flex:1;overflow:hidden;padding-bottom:0}#panel-add .add-content{overflow-y:auto;min-height:0;flex:1;padding:0 2px 8px;scrollbar-gutter:stable}}
+/* Avatar color follows declared voice identity and actual assignment, not focus. */
+:root{--avatar-male-pale:#d8f0ed;--avatar-male-bright:#36bdb5;--avatar-female-pale:#f9e0e8;--avatar-female-bright:#ee7097;--avatar-other-pale:#fff0c9;--avatar-other-bright:#f4bd39}
+.project-voice-card,.role-card{--avatar-pale:var(--avatar-other-pale);--avatar-bright:var(--avatar-other-bright)}
+.project-voice-card[data-gender=male],.role-card[data-gender=male]{--avatar-pale:var(--avatar-male-pale);--avatar-bright:var(--avatar-male-bright)}
+.project-voice-card[data-gender=female],.role-card[data-gender=female]{--avatar-pale:var(--avatar-female-pale);--avatar-bright:var(--avatar-female-bright)}
+.project-voice-card .voice-avatar,.project-voice-card[data-gender] .voice-avatar,.role-card .role-avatar{background:var(--avatar-pale)}
+.project-voice-card.has-assignment .voice-avatar,.project-voice-card.has-assignment[data-gender] .voice-avatar,.role-card.has-assignment .role-avatar{background:var(--avatar-bright)}
+/* Defaults reflect their effective draft candidate; selection alone stays pale. */
+.default-card{background:var(--avatar-other-pale)}
+.default-card[data-slot=male]{background:var(--avatar-male-pale)}
+.default-card[data-slot=female]{background:var(--avatar-female-pale)}
+.default-card.has-assignment{background:var(--yellow)}
+.default-card.has-assignment[data-slot=male]{background:var(--voice-male)}
+.default-card.has-assignment[data-slot=female]{background:var(--voice-female)}
+/* Desktop canvas: compact navigation, aligned panels, reachable primary actions. */
+@media(min-width:951px){
+  header{height:56px;padding:7px 24px;gap:16px;max-width:none}
+  header h1{font-size:21px;line-height:1.1}header .eyebrow{font-size:9px;letter-spacing:.5px}
+  .studio-brand{gap:10px}.brand-blocks{grid-template-columns:12px 12px;gap:3px}.brand-blocks i{width:12px;height:12px}
+  header .header-decoration{width:72px;height:30px}
+  .header-actions{gap:8px}.header-actions button,.header-actions .official-link{font-size:11px;padding:6px 10px;min-height:32px}.header-actions .badge{font-size:10px;padding:4px 8px}
+  #workspace{height:calc(100dvh - 84px);margin:12px auto 16px;padding:0 24px;gap:16px;max-width:1600px;align-items:stretch}
+  #workspace>.project-panel,#workspace>.editor-panel{height:100%;max-height:100%;padding:12px;min-height:0;scrollbar-gutter:auto}
+  #workspace>.editor-panel{overflow:hidden}
+  .project-panel>.section-heading{margin-bottom:4px}.project-panel .section-heading h2{font-size:18px}.project-panel .section-number{height:30px;min-width:30px;font-size:17px}
+  .project-panel #voice-list.project-library{margin:6px 0 8px;padding-bottom:2px}
+  .project-panel .library-scroll{padding-top:7px;padding-bottom:4px;scrollbar-gutter:auto}.project-panel .library-labels{padding-top:7px}.project-panel .library-number{padding-top:4px}
+  .project-panel .library-row,.project-panel .row-label{margin-bottom:6px}
+  .project-panel .assignment-section{padding-top:8px}.assignment-section>.section-heading{margin-bottom:6px}
+  .project-panel .assignment-section .defaults-section{margin-bottom:8px}
+  .project-panel .assignment-section .default-target{height:48px;padding-top:4px;padding-bottom:4px}
+  .assignment-section .default-cards{margin-top:3px}.assignment-section .requirements-heading{margin-bottom:2px}
+  .project-panel .assignment-section .role-card{height:56px;padding:5px 7px}
+  .project-panel .completion{margin-top:4px;padding-top:5px}
+  .project-panel #complete-settings{font-size:19px;min-height:40px;padding:6px 10px;margin:4px 0}
+  #complete-reason{line-height:1.3;margin-top:2px}.project-panel #operation-status,.project-panel #operation-error{margin-top:3px;line-height:1.3}.project-panel #reload-config{margin-top:3px;padding:0;line-height:1.3}
+  .editor-panel .tabs{margin-bottom:10px;padding-bottom:9px}.editor-panel .tabs button{padding:7px 4px}
+  body>footer{display:none}
+}
+@media(min-width:951px) and (max-height:800px){
+  .editor-panel .tabs{margin-bottom:7px;padding-bottom:7px}
+  .settings-content>.section-heading{margin-bottom:5px}
+  #settings-editor .parameter-grid{margin-top:6px}
+  #settings-editor .parameter-control{padding:3px 6px}
+  #settings-editor input[type=range]{height:20px}
+  .source-card{padding:6px 8px;margin-top:6px}
+  .source-card .source-grid{gap:4px 10px;margin-top:4px}
+  #settings-editor .settings-preview{margin-top:6px;padding:5px 0}
+  #settings-editor .preview-actions{margin-top:4px}
+  .settings-footer{padding-top:7px}
+}
+#workspace #voice-list.project-library{grid-template-columns:42px minmax(0,1fr)}
+@media(max-width:480px){#workspace #voice-list.project-library{grid-template-columns:34px minmax(0,1fr)}}
+/* Role identity is unknown until a voice is assigned. */
+#workspace .role-card .unknown-avatar{display:grid;place-items:center;background:#e2e2e2;color:#63636b;font-size:26px;font-weight:800;border:2px solid var(--ink);width:36px;height:36px}
+.role-detail{position:fixed;inset:auto;margin:0;width:min(320px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;padding:18px 22px;border:3px solid #20202c;background:#fff9df;color:#20202c;box-shadow:5px 5px 0 #20202c;clip-path:polygon(0 0,94% 0,100% 16px,100% 100%,18px 100%,0 calc(100% - 18px));z-index:50}
+.role-detail h3{margin:0 0 12px;font-size:18px}.role-detail strong{font-size:12px}.role-detail p{margin:4px 0 12px;line-height:1.6;font-size:14px}.role-detail p:last-child{margin-bottom:0}
+#open-provider-config{display:block;margin-top:4px}#provider-config-status:empty{display:none}#provider-config-status{font-size:11px;line-height:1.4;overflow-wrap:anywhere}

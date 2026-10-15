@@ -1,0 +1,5 @@
+{
+  "ref": {"kind": "provider_voice", "provider": "minimax", "region": "cn", "voice_id": "FAKE_VOICE_A"},
+  "voice_settings": {"speed": 1.0},
+  "metadata": {"gender": "female", "source": "fixture_user_confirmed"}
+}

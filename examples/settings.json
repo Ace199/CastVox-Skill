@@ -1,0 +1,6 @@
+{
+  "model": "fixture-model",
+  "export_mode": "paragraph",
+  "subtitle_enabled": true,
+  "subtitle_type": "sentence"
+}

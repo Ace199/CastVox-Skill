@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <link rel="icon" href="assets/studio.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/studio.css">
+  <link rel="stylesheet" href="css/v16.css">
+  <link rel="stylesheet" href="css/refresh.css?v=visual-1">
+  <title>Voice Studio V1.6 · 项目声音配置</title>
+</head>
+<body>
+  <a class="skip-link" href="#workspace">跳到声音工作台</a>
+  <header><div class="studio-brand"><img class="brand-geometry" src="assets/SoundMaker_UI_Assets/brand_geometry.png" alt="" width="54" height="48"><div><h1>MakeSoundSkill</h1><span class="eyebrow">VOICE STUDIO / 项目声音配置</span></div></div><p class="brand-tagline">让每个角色都有自己的声音</p><img class="header-decoration" src="assets/SoundMaker_UI_Assets/header_sound_geometry.png" alt="" width="320" height="48"><div class="header-actions"><button id="debug-toggle" aria-expanded="false" aria-controls="debug-panel" hidden>打开 Debug</button></div></header>
+  <main id="workspace" aria-label="声音工作台">
+    <section class="panel startup-help" aria-labelledby="startup-title">
+      <h2 id="startup-title">工作台尚未加载</h2>
+      <p>请通过本地 HTTP 服务打开，直接双击 HTML 文件无法加载模块。</p>
+      <p>在项目根目录打开终端，执行：</p>
+      <pre>python studio_server.py --port 8766</pre>
+      <p>保持终端运行，再打开 <a href="http://127.0.0.1:8766/">http://127.0.0.1:8766/</a>。</p>
+      <p class="muted">如果已经通过该地址打开，请检查本地服务是否仍在运行，然后刷新页面。</p>
+    </section>
+  </main>
+  <aside id="debug-panel" aria-labelledby="debug-title" hidden></aside>
+  <footer>用户选声音 → Agent 理解表演 → Python 可靠生成。</footer>
+  <script type="module" src="js/app.js?v=config-editor-1"></script>
+</body>
+</html>
+
+
+
+
+
+
+

@@ -1,0 +1,10 @@
+{
+  "display_name": "离线设计示例",
+  "source_type": "design",
+  "provider": "minimax",
+  "region": "cn",
+  "voice_id": "FAKE_EXISTING_DESIGN_ID",
+  "availability": "unknown",
+  "metadata": {"gender": "unknown"},
+  "design": {"prompt": "仅用于离线资产登记示例，不会发送给 Provider"}
+}

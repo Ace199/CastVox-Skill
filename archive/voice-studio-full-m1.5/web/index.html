@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <link rel="icon" href="assets/studio.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/studio.css">
+  <title>Voice Studio · M1.5</title>
+</head>
+<body>
+  <a class="skip-link" href="#workspace">跳到声音工作台</a>
+  <header><div class="studio-brand"><span class="brand-blocks" aria-hidden="true"><i></i><i></i><i></i></span><div><span class="eyebrow">MakeSoundSkill / M1.5</span><h1>VOICE STUDIO</h1></div></div><img class="header-decoration" src="assets/bauhaus-header-v1.svg" alt="" width="150" height="70"><div class="header-actions"><span class="badge">本地 Mock</span><button id="debug-toggle" aria-expanded="false" aria-controls="debug-panel" hidden>打开 Debug</button></div></header>
+  <main id="workspace" aria-label="声音工作台">
+    <section class="panel startup-help" aria-labelledby="startup-title">
+      <h2 id="startup-title">工作台尚未加载</h2>
+      <p>请通过本地 HTTP 服务打开，直接双击 HTML 文件无法加载模块。</p>
+      <p>在项目根目录打开终端，执行：</p>
+      <pre>python -m http.server 8765 --bind 127.0.0.1 --directory web</pre>
+      <p>保持终端运行，再打开 <a href="http://127.0.0.1:8765/">http://127.0.0.1:8765/</a>。</p>
+      <p class="muted">如果已经通过该地址打开，请检查本地服务是否仍在运行，然后刷新页面。</p>
+    </section>
+  </main>
+  <aside id="debug-panel" aria-labelledby="debug-title" hidden></aside>
+  <footer>声音工作台原型 · Mock 保存与缓存仅存内存，刷新重置；不会真实合成、收费或恢复 Agent。</footer>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+

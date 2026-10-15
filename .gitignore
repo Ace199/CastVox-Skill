@@ -1,0 +1,30 @@
+# Python / local environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+
+# Test scratch data and generated browser captures
+.test-tmp/
+.studio-test-tmp/
+web/qa/
+archive/**/web/qa/
+wireframes/qa/*.png
+node_modules/
+test-results/
+playwright-report/
+
+# Local credentials and machine-specific files
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.config/
+local-demo/
+*.log
+.DS_Store
+Thumbs.db

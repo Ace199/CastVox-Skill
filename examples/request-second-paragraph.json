@@ -1,0 +1,6 @@
+{
+  "assignments": [
+    {"target": "p001"},
+    {"target": "p002", "voice_alias": "男声音1"}
+  ]
+}
