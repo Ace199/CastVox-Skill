@@ -26,6 +26,18 @@ def initial(root):
             "voices": {}, "defaults": {"general": None, "male": None, "female": None}}
 
 
+def default_snapshots(obj):
+    """Upgrade legacy references using retained records, including soft-deleted ones."""
+    snapshots = obj.setdefault('default_snapshots', {})
+    for slot, vid in obj['defaults'].items():
+        if slot not in snapshots:
+            item = obj['voices'].get(vid)
+            snapshots[slot] = ({'project_voice_id': vid, **{k: copy.deepcopy(item[k])
+                for k in ('name', 'category', 'source', 'settings')},
+                'parameter_review_required': item.get('parameter_review_required', False)} if item else None)
+    return snapshots
+
+
 def validate(obj):
     require(isinstance(obj, dict) and obj.get("schema_version") == "1.6", "schema_version", "Expected V1.6 preset.")
     require(type(obj.get("revision")) is int and obj["revision"] >= 0)
@@ -46,6 +58,14 @@ def validate(obj):
             require(item["name"] not in names, "name_conflict", "An active voice already has this name.")
             names.add(item["name"])
         require(item.get("preview") is None or isinstance(item["preview"], dict))
+    for slot, item in obj.get('default_snapshots', {}).items():
+        require(slot in obj['defaults'])
+        if item is not None:
+            require(item['project_voice_id'] == obj['defaults'][slot])
+            v.name(item['name'])
+            require(item['category'] in {'male', 'female', 'other'})
+            source_valid(item['source'])
+            require(effective(item['source'], item['settings']) == item['settings'])
     v.no_secrets(obj)
 
 
@@ -64,12 +84,17 @@ class ProjectCore:
         # Existing legacy projects cannot silently become empty V1.6 projects.
         require(self.path.exists() or not (self.directory / "preset.json").exists(),
                 "migration_required", "Explicit legacy migration is required before V1.6 writes.")
-        return self.store.read()
+        obj = self.store.read()
+        default_snapshots(obj)
+        return obj
 
     def _update(self, change, revision):
         require(type(revision) is int and revision >= 0, "revision_required", "Expected revision is required.")
         self.read()
-        return self.store.update(change, revision)[0]
+        def upgraded(obj):
+            default_snapshots(obj)
+            change(obj)
+        return self.store.update(upgraded, revision)[0]
 
     def add_voice(self, name, category, source, revision, settings=None):
         source_valid(source)
@@ -90,6 +115,9 @@ class ProjectCore:
                 if key == "acknowledge_unverified_settings":
                     require(val is True, message="Explicit acknowledgement must be true.")
                     item["parameter_review_required"] = False
+                    for saved in obj.get('default_snapshots', {}).values():
+                        if saved and saved['project_voice_id'] == vid:
+                            saved['parameter_review_required'] = False
                     continue
                 item[key] = (v.name(val) if key == "name" else effective(item["source"], item["settings"], val)
                              if key == "settings" else copy.deepcopy(val))
@@ -105,6 +133,9 @@ class ProjectCore:
                     require(item and not item["deleted"] and (slot == "general" or slot == item["category"]),
                             "invalid_default", "Default must reference an active voice of the selected category.")
                 obj["defaults"][slot] = vid
+                obj['default_snapshots'][slot] = ({'project_voice_id': vid,
+                    **{k: copy.deepcopy(item[k]) for k in ('name', 'category', 'source', 'settings')},
+                    'parameter_review_required': item.get('parameter_review_required', False)} if vid else None)
         return self._update(change, revision)
 
     def save_settings(self, settings, revision):
@@ -125,25 +156,36 @@ class ProjectCore:
             vid = None
             for slot in ([gender] if gender in {"male", "female"} else []) + ["general"]:
                 candidate = obj["defaults"].get(slot)
-                item = obj["voices"].get(candidate)
-                if item and not item["deleted"] and (slot == "general" or slot == item["category"]):
+                item = default_snapshots(obj).get(slot)
+                if item and (slot == "general" or slot == item["category"]):
                     vid = candidate
                     break
             if vid is None:
                 return {"status": "needs_question"}
-            item = obj["voices"][vid]
         require(not item.get("parameter_review_required"), "parameter_review_required",
                 "Legacy parameters remain preserved but unverified; explicitly acknowledge their omission before a new Job.")
         values = effective(item["source"], item["settings"], overrides)
-        return {"status": "ready", "project_voice_id": vid, "source": copy.deepcopy(item["source"]),
+        return {"status": "ready", "project_voice_id": vid, "name": item["name"], "source": copy.deepcopy(item["source"]),
                 "effective_settings": values, "capability_validation": {"status": "validated", "descriptor": capabilities(item["source"])}}
 
     def managed_path(self, relative):
         require(isinstance(relative, str), "unsafe_path", "Expected a relative project path.")
         path = self.root / relative
         reject_links(path)
-        require(not Path(relative).is_absolute() and path.resolve().is_relative_to(self.directory.resolve()),
+        parts = Path(relative).parts
+        require(not Path(relative).is_absolute() and (path.resolve().is_relative_to(self.directory.resolve())
+                or parts[:2] == ('outputs', 'audio') and path.resolve().is_relative_to(self.root)),
                 "unsafe_path", "Managed path escapes project data.")
+        return path
+
+    def output_path(self, relative):
+        """Return a trusted project delivery path; mutable Core state stays in .makesound."""
+        require(isinstance(relative, str), "unsafe_path", "Expected a relative project output path.")
+        path = self.root / relative
+        reject_links(path)
+        require(not Path(relative).is_absolute() and path.resolve().is_relative_to(self.root)
+                and Path(relative).parts[:2] == ('outputs', 'audio'),
+                "unsafe_path", "Output path must stay under project outputs/audio.")
         return path
 
     def preview_state(self, vid):
@@ -153,7 +195,7 @@ class ProjectCore:
             return {"status": "missing", "preview": None}
         try:
             measured = duration(self.managed_path(sample["path"]))
-            require(5 <= measured <= 10 and abs(measured - sample["duration_seconds"]) < .001)
+            require(measured > 0 and abs(measured - sample["duration_seconds"]) < .001)
             require(sample.get("audio_hash") == digest(self.managed_path(sample["path"]).read_bytes().hex()))
         except (MakeSoundError, KeyError, TypeError, OSError):
             return {"status": "unavailable", "preview": copy.deepcopy(sample)}
@@ -180,14 +222,14 @@ class ProjectCore:
                 if old and old["signature"] == sig:
                     try:
                         old_path = self.managed_path(old["path"])
-                        if (5 <= duration(old_path) <= 10 and duration(old_path) == old["duration_seconds"]
+                        if (duration(old_path) > 0 and duration(old_path) == old["duration_seconds"]
                                 and old.get("audio_hash") == digest(old_path.read_bytes().hex())):
                             continue
                     except MakeSoundError:
                         pass
                 original = self.managed_path(result["path"])
                 seconds = duration(original)
-                if not 5 <= seconds <= 10:
+                if seconds <= 0:
                     continue
                 sid = uid("sample_")
                 relative = f".makesound/previews/{vid}/{sid}.wav"

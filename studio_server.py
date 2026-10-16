@@ -11,14 +11,14 @@ from urllib.parse import urlsplit
 WEB = Path(__file__).resolve().parent / 'web'
 PROVIDERS = (
     dict(id='minimax', name='MiniMax', identifier_label='MiniMax Voice ID',
-         url='https://www.minimax.cn/audio', identifier_pattern=r'^[A-Za-z0-9][A-Za-z0-9_-]{0,255}$',
+         url='https://www.minimax.cn/audio', identifier_pattern=None,
          help='在 MiniMax 官网选择声音并复制 Voice ID；官网调节的参数不会随 ID 携带。',
-         support='配置可用 · 合成未接入', identifier_hint='字母、数字、下划线或连字符，最长 256 字符'),
+         support='配置可用 · 合成未接入', identifier_hint='粘贴官网完整 Voice ID，保留内部空格和括号；最长 256 字符'),
     dict(id='volcengine', name='火山引擎', identifier_label='音色标识（speaker）',
          url='https://docs.volcengine.com/docs/DoubaoVoice/Tasksubmission?lang=zh',
          identifier_pattern=None,
-         help='参考豆包语音官方文档及控制台获取 speaker；resource_id 等字段尚待 Adapter 设计，不能套用 MiniMax 请求体。',
-         support='配置支持待接入 · 不可合成', identifier_hint='只保存配置草稿；尚未实现厂商级格式或可用性验证'),
+         help='参考豆包语音官方文档及控制台获取 speaker；resource_id 选择服务资源，model 选择模型版本，不能套用 MiniMax 请求体。',
+         support='配置可用 · 合成未接入', identifier_hint='填写火山引擎控制台音色库中的 speaker；需与配置中的资源版本匹配'),
 )
 
 from makesound.provider_config import safe_text, read_models
@@ -27,9 +27,8 @@ from studio_config_editor import config_path, open_config
 def provider_catalog(config_dir=None):
     result = []
     for spec in PROVIDERS:
-        # Volcengine's credential location/schema is deliberately not invented.
         path = config_path(spec['id'], config_dir)
-        editable = path is not None and (spec['id'] == 'minimax' or path.is_file())
+        editable = path is not None
         result.append({**spec, **read_models(path), 'source': 'mock_fixture' if config_dir else 'local_readonly', 'region': 'configured',
                        'config_edit': {'available': editable, 'reason': '' if editable else '火山引擎配置路径或模板尚未接入'}})
     return {'providers': result, 'business_mode': 'mock', 'network_calls': 0}

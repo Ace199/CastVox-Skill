@@ -1,7 +1,7 @@
 // UI-only in-memory adapter; no Python/Core writes or provider requests.
 import { clone, same, normalizeName, stableJson } from './validation.js';
 import { bootstrapData, mockPreview } from './mock-data.js';
-import { validateNewVoice, validateName, validateSettings, neutralSettings, defaultVoice, signature } from './voice-model.js';
+import { validateNewVoice, validateName, validateSettings, defaultVoice, signature } from './voice-model.js';
 import { fetchProviders } from './providers.js';
 import { withMockCapabilities } from './capabilities.js';
 
@@ -28,7 +28,7 @@ export function createMockApi(log = { record() {} }, descriptors = []) {
       const name = normalizeName(draft.name), identity = validateNewVoice(draft, providers);
       await begin(expectedRevision); validateName(data, name);
       let id; do { id = `pv_${String(nextId++).padStart(3, '0')}`; } while (Object.hasOwn(data.voices, id));
-      data.voices[id] = { id, name, ...identity, deleted: false, settings: neutralSettings(identity.source, providers), preview: null };
+      data.voices[id] = { id, name, ...identity, deleted: false, preview: null };
       return { data: changed('voice.mock.added', id), id };
     },
     async saveVoice({ id, draft, expectedSource, expectedRevision }) {

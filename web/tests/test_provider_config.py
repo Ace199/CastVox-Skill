@@ -21,6 +21,12 @@ class ProviderConfigTests(unittest.TestCase):
         self.tmp.cleanup()
     def write(self, value):
         self.path.write_text(json.dumps(value), encoding='utf-8')
+    def test_minimax_does_not_invent_a_restrictive_voice_id_pattern(self):
+        from studio_server import PROVIDERS
+        minimax = next(p for p in PROVIDERS if p['id'] == 'minimax')
+        self.assertIsNone(minimax['identifier_pattern'])
+        self.assertNotIn('字母、数字', minimax['identifier_hint'])
+
     def test_missing_models_is_not_authentication_failure(self):
         self.write({'api_key':'FAKE_SECRET_NEVER_RETURN','region':'cn','base_url':'https://api.minimax.cn'})
         result = read_models(self.path)
@@ -37,6 +43,12 @@ class ProviderConfigTests(unittest.TestCase):
         self.assertEqual(result['models'], [{'id':'M_A','name':'模型 A'},{'id':'M_B','name':'M_B'}])
         self.assertEqual(hashlib.sha256(self.path.read_bytes()).hexdigest(), before)
         self.assertFalse(any(secret in json.dumps(result) for secret in ('FAKE_SECRET','HIDDEN','DO_NOT_RETURN','api_key','password')))
+    def test_legacy_volc_access_key_cannot_leak_through_models(self):
+        self.write({'access_key': 'LEGACY_VOLC_SECRET', 'models': ['LEGACY_VOLC_SECRET']})
+        result = read_models(self.path)
+        self.assertEqual(result['model_status'], 'invalid_model_config')
+        self.assertNotIn('LEGACY_VOLC_SECRET', json.dumps(result))
+
     def test_bad_default_does_not_select_another_model(self):
         self.write({'models':['A'],'default_model':'B'})
         result = read_models(self.path)
@@ -61,7 +73,7 @@ class ProviderConfigTests(unittest.TestCase):
         self.assertEqual(result['network_calls'], 0)
         minimax, volc = result['providers']
         self.assertEqual(minimax['default_model'], 'MOCK_MINIMAX_HD')
-        self.assertIn('待接入', volc['support'])
+        self.assertIn('合成未接入', volc['support'])
         self.assertIn('speaker', volc['identifier_label'])
         self.assertEqual(volc['source'], 'mock_fixture')
 if __name__ == '__main__':

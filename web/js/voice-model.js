@@ -8,8 +8,13 @@ export const activeVoices = data => Object.values(data?.voices ?? {}).filter(voi
 export const signature = voice => stableJson({ source: voice.source, effective_settings: voice.settings });
 export const voiceSnapshot = voice => clone({ project_voice_id: voice.id, name: voice.name, category: voice.category, source: voice.source, settings: voice.settings });
 export function defaultVoice(data, slot, refs = data.defaults) {
+  const saved = refs[slot] === data.defaults[slot] && data.default_snapshots?.[slot];
+  if (saved) return { ...saved, id: saved.project_voice_id, deleted: false };
   const voice = data.voices[refs[slot]];
   return voice && !voice.deleted && (slot === 'general' || voice.category === slot) ? voice : null;
+}
+export function defaultDisplayVoice(data, slot, refs = data.defaults) {
+  return defaultVoice(data, slot, refs) ?? data.voices[refs[slot]] ?? null;
 }
 export function normalizedDefaults(data, refs = data.defaults) {
   return Object.fromEntries(slots.map(slot => [slot, defaultVoice(data, slot, refs)?.id ?? null]));
@@ -42,16 +47,16 @@ export function validateSettings(voice, draft, providers) {
       if (!same(comparable({ ...baseline, [key]: draft[key] })[key], comparable(baseline)[key])) throw new Error(`${key} 能力未验证，不能修改。`);
       continue;
     }
-    const steps = (value - cap.min) / cap.step;
+    const steps = cap.step === 'any' ? 0 : (value - cap.min) / cap.step;
     if (!Number.isFinite(value) || value < cap.min || value > cap.max || Math.abs(steps - Math.round(steps)) > 1e-7) throw new Error(`${key === 'speed' ? '语速' : '声调'}必须符合能力描述器的范围和步长。`);
-    settings[key] = value;
+    if (Object.hasOwn(voice.settings, key) || value !== cap.neutral) settings[key] = value;
   }
   return settings;
 }
 export function previewStatus(voice, player = {}) {
   if (!voice?.preview) return { kind: 'none', playable: false, text: '无试听：首次生成符合条件的配音片段后可试听。' };
   if (voice.preview.available === false || (player.voiceId === voice.id && player.sampleId === voice.preview.sample_id && player.status === 'error')) return { kind: 'unavailable', playable: false, text: '试听文件不可用；不会调用 TTS。' };
-  const stale = voice.preview.signature !== signature(voice);
+  const stale = voice.preview.backend_status ? voice.preview.backend_status === 'before_adjustment' : voice.preview.signature !== signature(voice);
   return { kind: stale ? 'stale' : 'valid', playable: true, text: `${stale ? '调整前试听' : '当前参数试听'}${voice.preview.mock ? ' · 示例音频' : ''}` };
 }
 export function resolveRole(state, role) {
@@ -70,7 +75,7 @@ export function buildAnswer(state) {
   const assignments = state.roles.map(role => ({ role_id: role.id, role_name: role.name, required: role.required !== false, ...resolveRole(state, role) }));
   const missing = assignments.filter(role => role.required && role.error);
   if (missing.length) throw new Error(`请完成必要角色：${missing.map(role => role.role_name).join('、')}`);
-  const payload = { mock: true, schema_version: 'studio-answer-ui-mock-v1', project_id: state.data.project.id, ...state.data.question,
+  const payload = { mock: state.data.mode !== 'persistent', schema_version: state.data.mode === 'persistent' ? 'studio-answer-v16' : 'studio-answer-ui-mock-v1', project_id: state.data.project.id, ...state.data.question,
     expected_revision: state.data.revision, assignments, defaults: clone(state.data.defaults) };
   let hash = 2166136261; for (const char of stableJson(payload)) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619) >>> 0;
   return { ...payload, answer_id: `MOCK_ANSWER_${hash}` };
@@ -81,5 +86,30 @@ export function validateNewVoice(draft, providers) {
   text(draft.voiceId);
   if (provider.identifier_pattern && !new RegExp(provider.identifier_pattern).test(draft.voiceId)) throw new Error('音色标识不符合当前厂商的本地格式要求。');
   if (!categories.includes(draft.category)) throw new Error('请明确选择声音分类。');
-  return { source: { provider: draft.provider, region: provider.region ?? 'configured', model: draft.model, voice_id: draft.voiceId }, category: draft.category };
+  const source = { provider: draft.provider, region: provider.region ?? 'configured', model: draft.model, voice_id: draft.voiceId };
+  const settings = neutralSettings(source, providers);
+  const parameters = { name: draft.name, category: draft.category,
+    speed: draft.speed ?? settings.speed ?? '', pitch: draft.pitch ?? settings.pitch ?? '' };
+  return { source, category: draft.category, settings: validateSettings({ source, settings }, parameters, providers) };
+}
+
+export function validateNewVoiceFields(draft, providers, data = null) {
+  const errors = {}, provider = providers.find(item => item.id === draft.provider);
+  if (!provider) errors.provider = '请选择声音厂商。';
+  if (!provider?.models.some(model => model.id === draft.model)) errors.model = '请选择该厂商已配置的模型。';
+  try { validateName({ voices: {} }, draft.name); } catch (error) { errors.name = draft.name ? error.message : '请填写项目声音名称。'; }
+  if (!errors.name && data) { try { validateName(data, draft.name); } catch (error) { errors.name = error.message; } }
+  try { text(draft.voiceId); } catch (error) { errors.voiceId = draft.voiceId ? error.message : '请填写音色标识。'; }
+  if (!errors.voiceId && provider?.identifier_pattern && !new RegExp(provider.identifier_pattern).test(draft.voiceId)) errors.voiceId = '音色标识不符合当前厂商的本地格式要求。';
+  if (!categories.includes(draft.category)) errors.category = '请明确选择声音分类。';
+  if (!errors.model) {
+    const source = { provider: draft.provider, region: provider.region ?? 'configured', model: draft.model, voice_id: draft.voiceId }, settings = neutralSettings(source, providers);
+    for (const key of ['speed', 'pitch']) {
+      const cap = controlCapability(source, providers, key);
+      if (!cap.enabled) continue;
+      const value = draft[key] ?? settings[key] ?? cap.neutral, number = value === '' ? NaN : Number(value), steps = cap.step === 'any' ? 0 : (number - cap.min) / cap.step;
+      if (!Number.isFinite(number) || number < cap.min || number > cap.max || Math.abs(steps - Math.round(steps)) > 1e-7) errors[key] = `${key === 'speed' ? '语速' : '声调'}必须符合能力描述器的范围和步长。`;
+    }
+  }
+  return errors;
 }

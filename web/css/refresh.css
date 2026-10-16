@@ -48,6 +48,8 @@ header .header-decoration{display:block;object-fit:contain;width:clamp(160px,25v
 .assignment-section .defaults-heading h3,.assignment-section .requirements-heading h3{font-size:13px}
 .project-panel .assignment-section .defaults-section{margin-bottom:12px}
 .assignment-section .defaults-actions button{min-height:25px;padding:3px 10px}
+.assignment-section .defaults-title-row{display:flex;align-items:baseline;gap:8px;min-width:0}
+.assignment-section #open-default-config{padding:2px 0;min-height:20px;margin:0;font-size:10px;font-weight:700;line-height:1.4;white-space:nowrap}
 #save-defaults:not(:disabled){background:var(--blue);color:white}
 .assignment-section .default-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 10px;margin-top:5px}
 .default-card[data-slot=general]{grid-column:auto}
@@ -86,7 +88,7 @@ header .header-decoration{display:block;object-fit:contain;width:clamp(160px,25v
   #workspace{height:calc(100dvh - 88px)}
   #workspace>.project-panel,#workspace>.editor-panel,#workspace>.editor-panel:has(.tool-panel:not([hidden])){height:100%;max-height:100%;min-height:0}
   .project-panel{display:flex;flex-direction:column;overflow-y:auto}
-  .project-panel>.section-heading,.project-panel>#voice-list,.project-panel>.assignment-section,.project-panel>.completion{flex-shrink:0}
+  .project-panel>.section-heading,.project-panel>#voice-list,.project-panel>#undo-area,.project-panel>.assignment-section,.project-panel>.completion{flex-shrink:0}
   .project-panel .completion{margin-top:auto}
 }
 @media(min-width:951px) and (max-height:800px){
@@ -184,3 +186,57 @@ header .header-decoration{display:block;object-fit:contain;width:clamp(160px,25v
 .default-voice-outline[data-slot=male]{border-color:#36bdb5}
 .default-voice-outline[data-slot=female]{border-color:#ee7097}
 .project-voice-card.is-selected:has(.default-voice-outline){outline-offset:-3px}
+#add-parameters{margin-top:18px}
+#add-parameters .parameter-grid{margin:0}
+#add-parameters .parameter-control{min-width:0;margin:0;padding:7px 10px 8px;border:1px solid #adb1bb}
+#add-parameters .parameter-control legend{font-size:12px;padding:0 4px}
+#add-parameters .parameter-control input[type=range]{width:100%;min-height:20px;padding:0;accent-color:var(--blue)}
+#add-parameters .parameter-value{display:flex;gap:6px;align-items:center}
+#add-parameters .parameter-value input{min-width:0;flex:1}
+#add-parameters .parameter-value button{flex:none;padding:6px;font-size:10px;min-height:32px}
+#add-parameters .parameter-help{font-size:10px;line-height:1.4;margin:5px 0 0}
+/* Match the config shortcut to the existing compact model-refresh action. */
+#panel-add #open-provider-config{padding:2px 0;min-height:20px;margin-top:4px}
+@media(min-width:951px){#panel-add .add-content{padding-bottom:24px}}
+@media(min-width:951px) and (max-height:800px){
+  #panel-add .add-content{padding-bottom:8px}
+  #panel-add .identity-grid{gap:10px 12px}
+  #panel-add label{margin-bottom:4px}
+  #panel-add input,#panel-add select{min-height:32px;padding:5px 8px}
+  #panel-add #provider-support{margin-top:4px}
+  #panel-add .provider-link{margin:10px 0 8px}
+  #add-parameters{margin-top:10px}
+  #add-parameters .parameter-control{padding:3px 6px}
+  #add-parameters .parameter-control input[type=range]{height:20px;min-height:20px}
+  #add-parameters .parameter-value input{height:34px;min-height:34px}
+}
+
+/* Keep each provider shortcut beside its status. */
+#panel-add .provider-action-row{display:flex;align-items:center;gap:8px;min-width:0;margin-top:4px}
+#panel-add .provider-action-row .text-button{flex:none;display:inline-block;margin:0;padding:2px 0;min-height:20px}
+#panel-add .provider-action-row #provider-support,#panel-add .provider-action-row #model-help{margin:0;font-size:11px;line-height:1.4;min-width:0}
+#panel-add .provider-action-row .status-warning{color:#b42318}
+#panel-add .provider-action-row :empty{display:none}
+#panel-add .provider-action-row #open-provider-config,#panel-add .provider-action-row #reload-providers{margin:0}
+
+#panel-add .provider-action-row #open-provider-config,#panel-add .provider-action-row #reload-providers,#panel-add .provider-action-row #provider-support,#panel-add .provider-action-row #model-help{font-family:inherit;font-size:10px;font-weight:400;line-height:1.4}
+
+#panel-add .provider-action-row #open-provider-config,#panel-add .provider-action-row #reload-providers{font-weight:700}
+
+#panel-add .section-heading .provider-link{margin:0 0 0 auto;flex-shrink:0}
+#panel-add .section-heading .provider-link .official-link{white-space:nowrap;font-size:11px;padding:6px 8px}
+@media(max-width:480px){#panel-add .section-heading{flex-wrap:wrap;gap:8px}#panel-add .section-heading .provider-link .official-link{font-size:10px;padding:5px 6px}}
+
+#panel-add #add-feedback{grid-column:1 / -1;margin:0;font-size:11px;line-height:1.4;overflow-wrap:anywhere}
+#panel-add #add-feedback:empty{display:none}
+#panel-add label.field-invalid::after,#add-parameters legend.field-invalid::after{content:' *';color:#b42318;font-weight:800}
+#panel-add input[aria-invalid=true],#panel-add select[aria-invalid=true]{border-color:#b42318}
+
+#add-error-dialog{position:fixed;width:min(480px,calc(100vw - 32px));max-height:calc(100dvh - 32px);margin:auto;padding:44px 42px 40px;border:0;border-radius:0;background:var(--white) url('../assets/error-dialog-background.png') center / 100% 100% no-repeat;box-shadow:8px 8px 0 #14203455;color:var(--ink);overflow:auto}
+#add-error-dialog::backdrop{background:#14203480}
+#add-error-dialog .eyebrow{display:block;color:#b42318;margin-bottom:10px}
+#add-error-dialog h2{font-size:24px;margin:0 0 14px}
+#add-error-message{font-size:14px;line-height:1.7;margin:0 0 12px;overflow-wrap:anywhere}
+#add-error-dialog #close-add-error{position:absolute;top:26px;right:28px;padding:0;width:24px;height:24px;min-height:0;border:0;background:transparent;box-shadow:none;font-size:23px;line-height:24px}
+#dismiss-add-error{font-size:12px;padding:8px 16px}
+@media(max-width:480px){#add-error-dialog{padding:36px 30px 32px}#add-error-dialog h2{font-size:21px}#add-error-dialog #close-add-error{top:22px;right:22px}}

@@ -1,19 +1,36 @@
 import { clone, same } from './validation.js';
-import { editorDirty, signature, validateSettings, defaultVoice, slotNames, buildAnswer } from './voice-model.js';
+import { editorDirty, signature, validateNewVoiceFields, validateSettings, defaultVoice, slotNames, buildAnswer } from './voice-model.js';
 import { defaultsDirty } from './store.js';
 export function createController(store, api, log) {
-  const fail = error => { const state = store.getState(); store.update({ busy: false, error: error.message, needsRefresh: state.needsRefresh || error.code === 'revision_conflict', confirmation: state.confirmation?.kind === 'restore-name' && error.code !== 'revision_conflict' ? state.confirmation : null }); log.record({ name: 'action.failed', objectId: state.editor.id ?? state.data?.project.id, result: '未完成，草稿保留', error }); };
-  const protect = async run => { if (store.getState().busy) return false; try { return await run(); } catch (error) { fail(error); return false; } };
+  const addErrorField = message => /分类/.test(message) ? 'category' : /名称|同名/.test(message) ? 'name' : /模型/.test(message) ? 'model' : /语速/.test(message) ? 'speed' : /声调/.test(message) ? 'pitch' : 'voiceId';
+  const fail = error => { const state = store.getState(); store.update({ busy: false, submitting: false, error: error.message, needsRefresh: state.needsRefresh || error.code === 'revision_conflict', confirmation: state.confirmation?.kind === 'restore-name' && error.code !== 'revision_conflict' ? state.confirmation : null }); log.record({ name: 'action.failed', objectId: state.editor.id ?? state.data?.project.id, result: '未完成，草稿保留', error }); };
+  const protect = async (run, onFailure) => { if (store.getState().busy) return false; try { return await run(); } catch (error) { fail(error); onFailure?.(error); return false; } };
   const commit = (data, preserveBusy = false) => { const state = store.getState(); store.update({ ...(data.revision >= (state.data?.revision ?? -1) ? { data } : {}), ...(preserveBusy ? {} : { busy: false }), receipt: null, ...(defaultsDirty(state) ? {} : { defaultsDraft: clone(data.defaults) }) }); };
   const requireFresh = state => { if (state.needsRefresh) throw Object.assign(new Error('请先重新读取配置，再次保存。'), { code: 'revision_conflict' }); };
   const apiController = {
     async load() {
       if (store.getState().busy) return; store.update({ busy: true });
-      try { const data = await api.load(), state = store.getState(); store.update({ data, roles: state.data ? state.roles : data.roles, defaultsDraft: state.data && defaultsDirty(state) ? state.defaultsDraft : clone(data.defaults), busy: false, status: 'ready', needsRefresh: false, confirmation: null, receipt: null, error: '', message: '' }); }
+      try { const data = await api.load(), state = store.getState(); store.update({ data, roles: api.mode === 'persistent' ? data.roles : state.data ? state.roles : data.roles, defaultsDraft: state.data && defaultsDirty(state) ? state.defaultsDraft : clone(data.defaults), busy: false, status: 'ready', needsRefresh: false, confirmation: null, receipt: null, error: '', message: '' }); }
       catch (error) { fail(error); }
     },
+    assign(id) {
+      if (api.mode !== 'persistent' || store.getState().activeDefaultSlot) return store.assign(id);
+      return protect(async () => { const state = store.getState(); requireFresh(state); if (!state.activeRoleId) return store.assign(id); store.update({ busy: true, error: '' });
+        const data = await api.assignRole(state.activeRoleId, id, state.data.revision); commit(data); store.update({ roles: data.roles, message: '角色分配已保存', selectedVoiceId: id }); });
+    },
     refreshProviders() { return protect(async () => { store.update({ busy: true }); const providers = await api.loadProviders(); store.update({ providers, busy: false, message: '模型已更新' }); }); },
-    addVoice() { return protect(async () => { const state = store.getState(); requireFresh(state); store.update({ busy: true, error: '' }); const result = await api.addVoice({ draft: state.draft, expectedRevision: state.data.revision }); commit(result.data); store.resetDraft(); store.update({ message: '已添加项目声音' }); return true; }); },
+    addVoice() {
+      const state = store.getState(), draftErrors = validateNewVoiceFields(state.draft, state.providers, state.data);
+      if (Object.keys(draftErrors).length) {
+        const message = Object.values(draftErrors)[0];
+        store.update({ draftErrors, draftTouched: { ...state.draftTouched, ...Object.fromEntries(Object.keys(draftErrors).map(field => [field, true])) }, error: message, addError: message });
+        return Promise.resolve(false);
+      }
+      return protect(async () => { const current = store.getState(); requireFresh(current); store.update({ busy: true, error: '' }); const result = await api.addVoice({ draft: current.draft, expectedRevision: current.data.revision }); commit(result.data); store.resetDraft(); store.update({ message: '已添加项目声音', addError: null }); return true; }, error => {
+        const latest = store.getState(), field = addErrorField(error.message);
+        store.update({ addError: error.message, draftErrors: { ...latest.draftErrors, [field]: error.message }, draftTouched: { ...latest.draftTouched, [field]: true } });
+      });
+    },
     openSettings(id) {
       const state = store.getState(); if (state.busy) return;
       if (state.editor.id === id) { store.update({ activeTab: 'settings' }); return; }
@@ -49,7 +66,7 @@ export function createController(store, api, log) {
       return api.updatePreview({ id, expectedSignature, expectedRevision: state.data.revision }).then(data => { commit(data, true); store.update({ message: '试听已更新' }); }).catch(error => { store.update({ error: error.message }); log.record({ name: 'preview.update.failed', objectId: id, result: '旧样本保留', error }); }).finally(() => store.update({ previewSaving: { ...store.getState().previewSaving, [id]: false } }));
     },
     setPreviewScenario(id, scenario) { return protect(async () => { const state = store.getState(); store.update({ busy: true }); const data = await api.setPreviewScenario({ id, scenario, expectedRevision: state.data.revision }); commit(data); }); },
-    submit() { return protect(async () => { const state = store.getState(); requireFresh(state); const answer = buildAnswer(state); store.update({ busy: true, error: '' }); const receipt = await api.submitAnswer(answer); store.update({ busy: false, receipt, message: '配置已模拟提交' }); }); }
+    submit() { return protect(async () => { const state = store.getState(); if (state.receipt?.session_complete) return; requireFresh(state); if (api.mode === 'persistent' && !state.data.question) { store.update({ busy: true }); const receipt = await api.complete(); store.update({ busy: false, receipt, message: '项目管理已完成；未启动合成' }); return; } const answer = buildAnswer(state); store.update({ busy: true, submitting: true, error: '' }); const receipt = await api.submitAnswer(answer); store.update({ busy: false, submitting: false, receipt, message: receipt.session_complete ? (receipt.wake?.status === 'awaiting_task' ? '绑定已保存，已交回 WorkBuddy 后台任务。请返回原聊天查看后续结果。' : receipt.wake?.status === 'delivered' ? '绑定已保存，WorkBuddy 已确认向原会话投递。请返回聊天查看；若未继续，发送“完成了”。' : receipt.wake?.status === 'queued' ? '绑定已保存，已向原聊天发送完成消息。可以关闭此页面，返回聊天查看演绎单。' : receipt.wake?.status === 'sent_unconfirmed' ? '绑定已保存，通知已写入原会话，但尚未确认 Claude 接收或回复。请返回原聊天查看；若未继续，发送“完成了”。' : '绑定已保存，但未确认自动通知成功。可以关闭此页面，回到原聊天发送“完成了”。') : api.mode === 'persistent' ? '回答已保存，等待 Agent 领取；未启动合成' : '配置已模拟提交' }); }); }
   };
   return apiController;
 }

@@ -133,6 +133,116 @@ class V16HTTP(Fixture, unittest.TestCase):
         for path in ("/api/v16/preview/../../credentials", "/../makesound/core_v16.py", "/tests/test.py"):
             self.assertIn(self.request(path)[0], {400, 404})
 
+    def test_session_module_is_ephemeral_and_blocks_cross_site(self):
+        status, raw, headers = self.request('/js/session.js', headers={'Authorization': ''})
+        self.assertEqual(status, 200)
+        self.assertIn(self.server.session_token.encode(), raw)
+        self.assertEqual(headers['Cross-Origin-Resource-Policy'], 'same-origin')
+        self.assertIn('no-store', headers['Cache-Control'])
+        for headers in ({'Origin': 'https://evil.invalid'}, {'Sec-Fetch-Site': 'cross-site'}, {'Host': 'evil.invalid'}):
+            self.assertEqual(self.request('/js/session.js', headers=headers)[0], 403)
+        self.assertEqual(self.request('/js/session.js.map')[0], 404)
+
+    def test_config_open_requires_auth_and_trusted_enabled_path(self):
+        # A backend without configured paths must never open the user's home file.
+        with patch('studio_config_editor.launch_editor', side_effect=AssertionError('Must not open home credentials')):
+            self.assertEqual(self.request('/api/providers/open-config', {'provider': 'minimax'})[0], 403)
+        from studio_config_editor import config_path
+        directory = self.root / 'isolated-providers'
+        self.server.config_dir = directory
+        self.backend.config_dir = directory
+        self.backend.config_paths = {'minimax': config_path('minimax', directory)}
+        with patch('studio_config_editor.launch_editor') as editor:
+            self.assertEqual(self.request('/api/providers/open-config', {'provider': 'minimax'}, headers={'X-CSRF-Token': ''})[0], 403)
+            status, raw, _ = self.request('/api/providers/open-config', {'provider': 'minimax'})
+            self.assertEqual(status, 200)
+            self.assertTrue(json.loads(raw)['created'])
+            path = config_path('minimax', directory)
+            before = path.read_bytes()
+            self.assertEqual(self.request('/api/providers/open-config', {'provider': 'minimax'})[0], 200)
+            self.assertEqual(path.read_bytes(), before)
+            self.assertEqual(editor.call_count, 2)
+            self.assertNotIn(b'api_key', raw)
+            self.assertEqual(self.request('/api/providers/open-config', {'provider': 'minimax', 'path': 'arbitrary'})[0], 400)
+
+    def test_volc_missing_config_is_editable_then_reload_redacts_credentials(self):
+        from studio_config_editor import config_path
+        directory = self.root / 'volc-config'
+        self.server.config_dir = self.backend.config_dir = directory
+        path = config_path('volcengine', directory)
+        self.backend.config_paths = {'volcengine': path}
+        _, raw, _ = self.request('/api/v16/providers')
+        volc = next(p for p in json.loads(raw)['providers'] if p['id'] == 'volcengine')
+        self.assertTrue(volc['config_edit']['available'])
+        self.assertEqual(volc['model_status'], 'not_configured')
+        with patch('studio_config_editor.launch_editor') as editor:
+            self.assertEqual(self.request('/api/providers/open-config', {'provider': 'volcengine'}, headers={'X-CSRF-Token': ''})[0], 403)
+            status, raw, _ = self.request('/api/providers/open-config', {'provider': 'volcengine'})
+            self.assertEqual(status, 200)
+            self.assertTrue(json.loads(raw)['created'])
+            editor.assert_called_once_with(path)
+        config = json.loads(path.read_text(encoding='utf-8'))
+        config['api_key'] = 'VOLC_SECRET_NEVER_RETURN'
+        path.write_text(json.dumps(config), encoding='utf-8')
+        before = path.read_bytes()
+        _, raw, _ = self.request('/api/v16/providers')
+        volc = next(p for p in json.loads(raw)['providers'] if p['id'] == 'volcengine')
+        self.assertEqual(volc['default_model'], 'seed-tts-2.0-standard')
+        self.assertEqual(volc['region'], 'cn')
+        self.assertEqual(volc['synthesis_status'], 'provider_not_implemented')
+        self.assertEqual(volc['models'][0]['capabilities'], {})
+        self.assertNotIn(b'VOLC_SECRET', raw)
+        self.assertNotIn(b'api_key', raw)
+        self.assertEqual(path.read_bytes(), before)
+        self.assertFalse(self.core.path.exists())
+
+    def test_single_session_stops_only_after_its_answer_is_saved(self):
+        _, result = self.add()
+        q = self.backend.questions.create('job_once', 'session_once', ['r'])
+        self.server.question_id = q['question_id']
+        self.server.close_after_answer = True
+        bad = {'question_id': q['question_id'], 'assignments': {}}
+        self.assertEqual(self.request('/api/v16/answers', bad)[0], 400)
+        self.assertTrue(self.thread.is_alive())
+        self.assertEqual(self.request('/api/v16/complete', {})[0], 400)
+        good = {'question_id': q['question_id'], 'assignments': {'r': result['project_voice_id']}}
+        def delivered(core, qid):
+            self.assertEqual(self.backend.questions.read(qid)['status'], 'answered')
+            return {'status': 'queued'}
+        with patch('makesound.harness_resume.notify', side_effect=delivered) as wake:
+            status, raw, _ = self.request('/api/v16/answers', good)
+            wake.assert_called_once_with(self.core, q['question_id'])
+        self.assertEqual(json.loads(raw)['wake']['status'], 'queued')
+        self.assertEqual(status, 200)
+        self.assertTrue(json.loads(raw)['session_complete'])
+        self.thread.join(timeout=3)
+        self.assertFalse(self.thread.is_alive())
+        self.assertEqual(self.backend.questions.read(q['question_id'])['status'], 'answered')
+
+    def test_bound_session_rejects_another_question(self):
+        _, result = self.add()
+        q = self.backend.questions.create('job_other', 'session_other', ['r'])
+        self.server.question_id = 'q_bound'
+        self.assertEqual(self.request('/api/v16/answers', {
+            'question_id': q['question_id'], 'assignments': {'r': result['project_voice_id']}})[0], 400)
+        self.assertEqual(self.backend.questions.read(q['question_id'])['status'], 'pending')
+
+    def test_assignment_http_freezes_before_delete_and_revision_conflicts(self):
+        _, result = self.add()
+        vid = result['project_voice_id']
+        question = self.backend.questions.create('job_bound', 'session_bound', ['r'], role_metadata={'r': {'appearance_summary': '任务角色'}})
+        qid = question['question_id']
+        body = {'question_id': qid, 'role_id': 'r', 'project_voice_id': vid, 'revision': 0}
+        self.assertEqual(self.request('/api/v16/assignments', body)[0], 409)
+        body['revision'] = 1
+        self.assertEqual(self.request('/api/v16/assignments', body)[0], 200)
+        self.core.edit_voice(vid, {'deleted': True}, 1)
+        self.assertEqual(self.request('/api/v16/answers', {'question_id': qid, 'assignments': {'r': vid}, 'revision': 1})[0], 409)
+        self.assertEqual(self.request('/api/v16/answers', {'question_id': qid, 'assignments': {'r': vid}, 'revision': 2})[0], 200)
+        public = json.loads(self.request('/api/v16/questions/' + qid)[1])
+        self.assertEqual(public['role_metadata']['r']['appearance_summary'], '任务角色')
+        self.assertNotIn('session_bound', json.dumps(public))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,3 +1,5 @@
+import { session } from './session.js';
+import { createPersistentApi } from './persistent-api.js';
 import { createStore } from './store.js';
 import { createMockApi } from './api.js';
 import { createController } from './controller.js';
@@ -11,13 +13,13 @@ import { createPreviewPlayer } from './preview-player.js';
 const store = createStore();
 let providers = [], configError = '';
 try { providers = await fetchProviders(); } catch (error) { configError = error.message; }
-const api = createMockApi(eventLog, providers);
+const api = session.mode === 'persistent' ? createPersistentApi(providers) : createMockApi(eventLog, providers);
 providers = api.getProviders();
 const draft = freshDraft(providers[0]?.id ?? 'minimax', providers[0]?.default_model ?? '');
 store.update({ providers, draft });
-const controller = createController(store, api, eventLog), player = createPreviewPlayer(store, eventLog);
+const controller = createController(store, api, eventLog), player = createPreviewPlayer(store, eventLog, undefined, api.previewBlob);
 mountStudio(document.querySelector('#workspace'), store, controller, eventLog, player);
-if (['localhost', '127.0.0.1', '[::1]'].includes(location.hostname) && new URLSearchParams(location.search).get('dev') !== '0') mountDebug(document.querySelector('#debug-panel'), document.querySelector('#debug-toggle'), store, api, controller, eventLog);
+if (session.mode === 'mock' && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname) && new URLSearchParams(location.search).get('dev') !== '0') mountDebug(document.querySelector('#debug-panel'), document.querySelector('#debug-toggle'), store, api, controller, eventLog);
 await controller.load();
 if (configError) store.update({ error: configError });
 

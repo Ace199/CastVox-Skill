@@ -34,10 +34,11 @@ export function mountSettings(root, store, controller, player) {
       range.hidden = !cap.enabled;
       if (cap.enabled) {
         for (const node of [input, range]) for (const attribute of ['min', 'max', 'step']) node.setAttribute(attribute, cap[attribute]);
+        range.step = cap.range_step ?? cap.step;
         range.value = draft[key] === '' ? cap.neutral : draft[key];
       } else for (const attribute of ['min', 'max', 'step']) input.removeAttribute(attribute);
       if (input.value !== String(draft[key])) input.value = draft[key];
-      get(`${key}-capability`).textContent = cap.enabled ? `${cap.min}–${cap.max} · 步长 ${cap.step}` : cap.reason;
+      get(`${key}-capability`).textContent = cap.enabled ? `${cap.min}–${cap.max}${cap.unit ? ` ${cap.unit}` : ''}${cap.step === 'any' ? '' : ` · 步长 ${cap.step}`}${cap.live_verified === false ? ' · 文档范围，真实效果未验收' : ''}` : cap.reason;
     }
     for (const [key, value] of Object.entries(voice.source)) { const target = get(`setting-${key === 'voice_id' ? 'voice-id' : key}`); if (target) target.textContent = value; }
     const status = previewStatus(voice, state.player), changedParameters = ['speed', 'pitch'].some(key => String(draft[key]) !== String(state.editor.baseline[key]));
@@ -45,6 +46,7 @@ export function mountSettings(root, store, controller, player) {
     const playing = state.player.voiceId === voice.id && state.player.status === 'playing';
     get('setting-play').disabled = state.busy || !status.playable;
     get('setting-play').textContent = playing ? '暂停试听' : state.player.voiceId === voice.id && state.player.status === 'paused' ? '继续试听' : '播放试听';
+    get('update-preview').hidden = state.data?.mode === 'persistent';
     get('update-preview').disabled = state.busy || editorDirty(state) || !!state.previewSaving[voice.id];
     get('preview-update-status').textContent = state.previewSaving[voice.id] ? '更新中，旧样本仍可播放' : editorDirty(state) ? '请先保存修改' : '';
     for (const id of ['cancel-settings', 'save-settings']) get(id).disabled = state.busy || !editorDirty(state);

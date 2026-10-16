@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from studio_config_editor import open_config, config_path
+from studio_config_editor import open_config, open_default_config, config_path
 from studio_server import Handler, ThreadingHTTPServer
 
 
@@ -31,8 +31,11 @@ class ConfigEditorTests(unittest.TestCase):
         self.assertEqual(self.opened, [path])
         self.assertTrue(result['created'])
         self.assertEqual(json.loads(path.read_text()), {
-            'api_key': 'write your own keys', 'region': 'cn',
-            'base_url': 'https://api.minimax.cn', 'models': [], 'default_model': None})
+            'api_key': 'YOUR_API_KEY_HERE', 'region': 'cn',
+            'base_url': 'https://api.minimax.cn',
+            'models': ['speech-2.8-hd', 'speech-2.8-turbo', 'speech-2.6-hd', 'speech-2.6-turbo',
+                       'speech-02-hd', 'speech-02-turbo', 'speech-01-hd', 'speech-01-turbo'],
+            'default_model': 'speech-2.8-hd'})
         self.assertNotIn('api_key', json.dumps(result))
 
     def test_existing_file_unchanged_even_invalid_json(self):
@@ -44,18 +47,45 @@ class ConfigEditorTests(unittest.TestCase):
         self.assertFalse(result['created'])
         self.assertNotIn('TEST_SECRET', json.dumps(result))
 
+    def test_open_default_config_opens_existing_project_preset_without_rewriting(self):
+        preset = self.root / '.makesound' / 'preset.v1.6.json'
+        preset.parent.mkdir()
+        original = '{"schema_version":"1.6","defaults":{"general":null}}\n'
+        preset.write_text(original, encoding='utf-8')
+        result = open_default_config(self.root, self.opened.append)
+        self.assertEqual(self.opened, [preset])
+        self.assertTrue(result['ok'])
+        self.assertEqual(preset.read_text(encoding='utf-8'), original)
+
     def test_repeat_create_preserves_user_edits(self):
         open_config('minimax', self.root, self.opened.append)
         path = self.root / 'minimax/config.json'; path.write_text('{"models":["USER_MODEL"]}')
         open_config('minimax', self.root, self.opened.append)
         self.assertEqual(path.read_text(), '{"models":["USER_MODEL"]}')
 
-    def test_unknown_provider_and_unconfigured_volc_do_not_write(self):
-        for provider in ('../minimax', 'other', 'volcengine'):
+    def test_unknown_provider_does_not_write(self):
+        for provider in ('../minimax', 'other'):
             with self.assertRaises(ValueError):
                 open_config(provider, self.root, self.opened.append)
         self.assertEqual(list(self.root.iterdir()), [])
-        self.assertIsNone(config_path('volcengine'))
+        self.assertEqual(config_path('volcengine'), Path.home() / '.config/volcengine/config.json')
+
+    def test_volc_template_uses_distinct_auth_resource_and_model(self):
+        result = open_config('volcengine', self.root, self.opened.append)
+        path = self.root / 'volcengine/config.json'
+        config = json.loads(path.read_text(encoding='utf-8'))
+        self.assertTrue(result['created'])
+        self.assertEqual(self.opened, [path])
+        self.assertEqual(config, {
+            'auth_mode': 'api_key', 'api_key': 'YOUR_VOLCENGINE_API_KEY_HERE',
+            'region': 'cn', 'base_url': 'https://openspeech.bytedance.com',
+            'tts_endpoint': '/api/v3/tts/unidirectional', 'resource_id': 'seed-tts-2.0',
+            'models': ['seed-tts-2.0-standard'], 'default_model': 'seed-tts-2.0-standard'})
+        self.assertNotIn('api_key', json.dumps(result))
+        path.write_bytes(b'{"access_key":"LEGACY_SECRET", broken')
+        again = open_config('volcengine', self.root, self.opened.append)
+        self.assertFalse(again['created'])
+        self.assertEqual(path.read_bytes(), b'{"access_key":"LEGACY_SECRET", broken')
 
     def test_existing_volc_fixture_can_open_without_changes(self):
         path = self.root / 'volcengine/config.json'; path.parent.mkdir(); path.write_text('{}')

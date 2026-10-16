@@ -6,12 +6,43 @@ import { createStore, freshDraft } from '../js/store.js';
 import { createController } from '../js/controller.js';
 import { createEventLog } from '../js/events.js';
 import { controlCapability } from '../js/capabilities.js';
-import { activeVoices, buildAnswer, defaultVoice, editorDirty, previewStatus, resolveRole, signature } from '../js/voice-model.js';
+import { activeVoices, buildAnswer, defaultDisplayVoice, defaultVoice, editorDirty, previewStatus, resolveRole, signature, validateNewVoice, validateNewVoiceFields, validateSettings } from '../js/voice-model.js';
 
 const descriptors = ['minimax', 'volcengine'].map(id => ({ id, name: id, region: 'configured', source: 'mock_fixture', ...JSON.parse(readFileSync(new URL(`./fixtures/providers/${id}/config.json`, import.meta.url))) }));
 async function setup() { const log = createEventLog(), api = createMockApi(log, descriptors), store = createStore(), providers = api.getProviders(); store.update({ providers, draft: freshDraft('minimax', providers[0].default_model) }); const controller = createController(store, api, log); await controller.load(); return { log, api, store, controller, providers }; }
 function fill(store, name = '新声音', id = 'MOCK_NEW_ID', category = 'other') { store.edit('name', name); store.edit('voiceId', id); store.edit('category', category); }
 async function saveDefaults(store, controller, values) { for (const [slot, id] of Object.entries(values)) store.editDefault(slot, id); controller.requestDefaults(); assert.equal(store.getState().confirmation.kind, 'defaults'); await controller.confirmDefaults(); }
+
+test('add voice saves custom parameters and resets them on clear or model change', async () => {
+  const { store, controller } = await setup();
+  fill(store, '添加参数'); store.edit('speed', '1.2'); store.edit('pitch', '-3');
+  await controller.addVoice();
+  assert.deepEqual(Object.values(store.getState().data.voices).find(v => v.name === '添加参数').settings, { speed: 1.2, pitch: -3 });
+  assert.equal(store.getState().draft.speed, null);
+  store.edit('speed', '1.5'); store.edit('model', 'MOCK_MINIMAX_FAST');
+  assert.equal(store.getState().draft.speed, null);
+});
+
+test('add parameter drafts remain provider-specific and invalid parameters cannot save', async () => {
+  const { store, controller } = await setup();
+  fill(store, '参数校验'); store.edit('speed', '3'); await controller.addVoice();
+  assert.match(store.getState().error, /范围|步长/);
+  store.edit('speed', '1.2'); store.switchProvider('volcengine');
+  assert.equal(store.getState().draft.speed, null); store.switchProvider('minimax');
+  assert.equal(store.getState().draft.speed, '1.2');
+});
+
+test('documented continuous speed accepts decimals and renaming legacy omitted parameters does not write defaults', () => {
+  const provider = { id: 'minimax', region: 'cn', models: [{ id: 'speech-2.8-hd', capabilities: {
+    speed: { supported: true, verified: true, min: .5, max: 2, step: 'any', range_step: .01, neutral: 1, live_verified: false },
+    pitch: { supported: true, verified: true, min: -12, max: 12, step: 1, neutral: 0, live_verified: false }
+  } }] };
+  const source = { provider: 'minimax', region: 'cn', model: 'speech-2.8-hd', voice_id: 'EXISTING' };
+  assert.equal(controlCapability(source, [provider], 'speed').enabled, true);
+  const added = validateNewVoice({ provider: 'minimax', model: source.model, voiceId: 'NEW', name: '新声音', category: 'male', speed: '1.234', pitch: '-3' }, [provider]);
+  assert.deepEqual(added.settings, { speed: 1.234, pitch: -3 });
+  assert.deepEqual(validateSettings({ source, settings: {} }, { name: '改名', category: 'male', speed: 1, pitch: 0 }, [provider]), {});
+});
 
 test('stable IDs: same source/different names create independent cards; active duplicate cannot overwrite', async () => {
   const { store, controller } = await setup(); fill(store, '版本一'); await controller.addVoice(); const a = Object.values(store.getState().data.voices).find(v => v.name === '版本一'); fill(store, '版本二'); await controller.addVoice(); const b = Object.values(store.getState().data.voices).find(v => v.name === '版本二'); assert.notEqual(a.id, b.id); assert.deepEqual(a.source, b.source);
@@ -50,6 +81,14 @@ test('default invalidation by category keeps raw reference and explicit task ide
   const { store, controller } = await setup(); await saveDefaults(store, controller, { female: 'pv_002' }); store.selectRole('MOCK_ROLE_B'); store.assign('pv_002'); const assignment = store.getState().roles[1].assignment;
   controller.openSettings('pv_002'); store.editSetting('category', 'other'); await controller.saveSettings(); assert.equal(store.getState().confirmation.kind, 'category'); await controller.saveSettings(true, null); const state = store.getState(); assert.equal(state.data.defaults.female, 'pv_002'); assert.equal(defaultVoice(state.data, 'female'), null); assert.deepEqual(state.roles[1].assignment, assignment);
 });
+test('invalid default keeps its saved voice name visible for repair', async () => {
+  const { store, controller } = await setup();
+  await saveDefaults(store, controller, { general: 'pv_001' });
+  await controller.deleteVoice('pv_001', store.getState().data.revision);
+  const state = store.getState();
+  assert.equal(defaultVoice(state.data, 'general'), null);
+  assert.equal(defaultDisplayVoice(state.data, 'general').name, '项目旁白');
+});
 test('role resolution uses only explicit gender requirements, preserves invalid explicit assignments without fallback', async () => {
   const { store, controller } = await setup(); await saveDefaults(store, controller, { female: 'pv_002', general: 'pv_001' }); const state = store.getState(); assert.equal(resolveRole(state, state.roles[1]).via, 'default_female'); assert.equal(resolveRole(state, { name: '女王', gender_requirement: null, assignment: null }).via, 'default_general'); assert.ok(resolveRole(state, { assignment: { project_voice_id: 'missing', snapshot: null } }).error);
 });
@@ -83,4 +122,96 @@ test('revision/failure preserve settings draft for retry', async () => {
 });
 test('local Mock wave fixtures have actual 6/7-second durations and are labeled synthetic', () => {
   for (const [name, seconds] of [['a', 6], ['b', 7]]) { const bytes = readFileSync(new URL(`../assets/mock-preview-${name}.wav`, import.meta.url)); assert.equal(bytes.toString('ascii', 0, 4), 'RIFF'); assert.equal(bytes.readUInt32LE(40) / bytes.readUInt32LE(28), seconds); }
+});
+
+
+test('MiniMax system voice IDs preserve spaces and parentheses when adding', async () => {
+  const { store, controller } = await setup();
+  const providers = store.getState().providers.map(p => p.id === 'minimax' ? { ...p, identifier_pattern: null } : p);
+  store.update({ providers });
+  const draft = { ...store.getState().draft, name: '不羁青年', voiceId: 'Chinese (Mandarin)_Reliable_Executive', category: 'male' };
+  const result = validateNewVoice(draft, providers);
+  assert.equal(result.source.voice_id, draft.voiceId);
+  for (const voiceId of ['', ' leading', 'trailing ', 'bad\nID', 'Bearer SECRET']) {
+    assert.throws(() => validateNewVoice({ ...draft, voiceId }, providers));
+  }
+});
+
+
+test('failed add opens error feedback and keeps the complete draft', async () => {
+  const { store, controller } = await setup();
+  fill(store, '未保存声音', 'Chinese (Mandarin)_Reliable_Executive', '');
+  const before = structuredClone(store.getState().draft);
+  assert.equal(await controller.addVoice(), false);
+  assert.match(store.getState().addError, /分类/);
+  assert.deepEqual(store.getState().draft, before);
+  assert.equal(store.getState().busy, false);
+});
+
+test('add form validates each edited field immediately and clears its marker when corrected', async () => {
+  const { store } = await setup();
+  store.edit('voiceId', '');
+  assert.equal(store.getState().draftTouched.voiceId, true);
+  assert.match(store.getState().draftErrors.voiceId, /填写音色标识/);
+  assert.equal(store.getState().draftTouched.category, undefined);
+
+  store.edit('voiceId', 'Chinese (Mandarin)_Reliable_Executive');
+  assert.equal(store.getState().draftErrors.voiceId, undefined);
+
+  const errors = validateNewVoiceFields({ ...store.getState().draft, category: '' }, store.getState().providers, store.getState().data);
+  assert.match(errors.category, /分类/);
+});
+
+
+test('saved default snapshot survives a deleted or changed library voice', () => {
+  const saved = { project_voice_id: 'pv_saved', name: 'Saved', category: 'male', source: { voice_id: 'original' }, settings: { speed: 1.2 } };
+  const data = { defaults: { general: 'pv_saved' }, default_snapshots: { general: saved }, voices: { pv_saved: { id: 'pv_saved', deleted: true, settings: { speed: 2 } } } };
+  assert.equal(defaultVoice(data, 'general').settings.speed, 1.2);
+  assert.equal(defaultDisplayVoice(data, 'general').name, 'Saved');
+  assert.equal(resolveRole({ data }, {}).snapshot.source.voice_id, 'original');
+  assert.equal(defaultVoice(data, 'general', { general: null }), null);
+});
+
+test('completion reports pending immediately and cannot submit again after saved receipt', async () => {
+  const { store, api, controller } = await setup();
+  for (const role of store.getState().roles) { store.selectRole(role.id); store.assign('pv_001'); }
+  let release, calls = 0;
+  api.submitAnswer = () => { calls++; return new Promise(resolve => { release = resolve; }); };
+  const pending = controller.submit();
+  assert.equal(store.getState().submitting, true);
+  await controller.submit();
+  assert.equal(calls, 1);
+  release({ session_complete: true, wake: { status: 'queued' } });
+  await pending;
+  assert.equal(store.getState().submitting, false);
+  await controller.submit();
+  assert.equal(calls, 1);
+});
+
+test('native write receipt does not claim Claude has resumed', async () => {
+  const { store, api, controller } = await setup();
+  for (const role of store.getState().roles) { store.selectRole(role.id); store.assign('pv_001'); }
+  api.submitAnswer = async () => ({ session_complete: true, wake: { status: 'sent_unconfirmed' } });
+  await controller.submit();
+  assert.match(store.getState().message, /已写入原会话/);
+  assert.match(store.getState().message, /未确认.*接收/);
+});
+
+test('WorkBuddy host delivery receipt asks the user to verify the original chat', async () => {
+  const { store, api, controller } = await setup();
+  for (const role of store.getState().roles) { store.selectRole(role.id); store.assign('pv_001'); }
+  api.submitAnswer = async () => ({ session_complete: true, wake: { status: 'delivered' } });
+  await controller.submit();
+  assert.match(store.getState().message, /WorkBuddy 已确认向原会话投递/);
+  assert.match(store.getState().message, /若未继续/);
+  assert.doesNotMatch(store.getState().message, /自动继续成功/);
+});
+
+test('WorkBuddy managed task handoff does not claim a desktop message was delivered', async () => {
+  const { store, api, controller } = await setup();
+  for (const role of store.getState().roles) { store.selectRole(role.id); store.assign('pv_001'); }
+  api.submitAnswer = async () => ({ session_complete: true, wake: { status: 'awaiting_task' } });
+  await controller.submit();
+  assert.match(store.getState().message, /WorkBuddy 后台任务/);
+  assert.doesNotMatch(store.getState().message, /已向原聊天发送|已确认.*投递/);
 });

@@ -71,6 +71,14 @@ class V16(Fixture, unittest.TestCase):
         self.error("name_conflict", lambda: self.edit({"deleted": False}))
         self.edit({"name": "恢复", "deleted": False})
 
+    def test_defaults_preserve_settings_after_edit_delete_and_restart(self):
+        self.defaults(general=self.vid)
+        before = self.core.resolve()
+        self.edit({'settings': {'speed': 1.5}, 'deleted': True})
+        self.assertEqual(ProjectCore(self.a).resolve(), before)
+        self.defaults(general=None)
+        self.assertEqual(self.core.resolve()['status'], 'needs_question')
+
     def test_B_order_no_gender_inference_and_empty_defaults(self):
         female = self.add("女声", "female")
         self.assertEqual(self.core.resolve()["status"], "needs_question")
@@ -86,14 +94,14 @@ class V16(Fixture, unittest.TestCase):
         self.defaults(general=other, male=self.vid)
         self.edit({"deleted": True})
         self.error("voice_unavailable", lambda: self.core.resolve(explicit=self.vid))
-        self.assertEqual(self.core.resolve(gender="male")["project_voice_id"], other)
+        self.assertEqual(self.core.resolve(gender="male")["project_voice_id"], self.vid)
         self.edit({"deleted": False})
         self.assertEqual(self.core.resolve(gender="male")["project_voice_id"], self.vid)
 
     def test_B_category_default_mismatch_retains_reference(self):
         self.defaults(male=self.vid)
         self.edit({"category": "female"})
-        self.assertEqual(self.core.resolve(gender="male")["status"], "needs_question")
+        self.assertEqual(self.core.resolve(gender="male")["status"], "ready")
         self.assertEqual(self.core.read()["defaults"]["male"], self.vid)
 
     def test_B_undo_never_overwrites_new_default(self):
@@ -125,19 +133,23 @@ class V16(Fixture, unittest.TestCase):
         self.assertEqual(restarted.run(snap["job_id"])["status"], "success")
         self.assertEqual(snap["chunks"][0]["effective_settings"]["speed"], 1)
 
-    def test_D_order_boundaries_no_truncation(self):
+    def test_D_first_short_sample_preserved(self):
         snap, result = self.run_job((4.999, 10.001, 5, 10))
         sample = self.core.preview_state(self.vid)["preview"]
-        self.assertEqual(sample["source_chunk_id"], snap["chunks"][2]["chunk_id"])
-        self.assertEqual(sample["duration_seconds"], 5)
+        self.assertEqual(sample["source_chunk_id"], snap["chunks"][0]["chunk_id"])
+        self.assertAlmostEqual(sample["duration_seconds"], 4.999, places=3)
         self.assertEqual(result["status"], "success")
         self.assertEqual(self.fake.calls, 4)
 
-    def test_D_inclusive_ten_and_no_eligible_sample(self):
-        self.run_job((10.001, 4.999))
-        self.assertEqual(self.core.preview_state(self.vid)["status"], "missing")
+    def test_D_long_sample_kept_complete_without_changing_original(self):
+        snap, result = self.run_job((10.001, 4.999))
+        original = self.core.managed_path(result["chunks"][snap["chunks"][0]["chunk_id"]]["path"])
+        self.assertGreater(duration(original), 10)
+        preview_path = self.core.managed_path(self.core.preview_state(self.vid)["preview"]["path"])
+        self.assertEqual(preview_path.read_bytes(), original.read_bytes())
+        self.assertEqual(self.core.preview_state(self.vid)["preview"]["duration_seconds"], duration(original))
         self.run_job((10,))
-        self.assertEqual(self.core.preview_state(self.vid)["preview"]["duration_seconds"], 10)
+        self.assertEqual(self.core.preview_state(self.vid)["preview"]["duration_seconds"], duration(original))
 
     def test_D_independent_file_deleted_exports_cache_and_card_preserved(self):
         snap, state = self.run_job()
@@ -411,7 +423,7 @@ class V16(Fixture, unittest.TestCase):
 
     def test_E_confirmed_authorization_and_unsupported_exports(self):
         self.error("authorization_required", lambda: self.engine.freeze(self.segments(), confirmed=True))
-        self.core.save_settings({"audio_format": "mp3"}, self.core.read()["revision"])
+        self.core.save_settings({"audio_format": "flac"}, self.core.read()["revision"])
         self.error("export_not_implemented", self.freeze)
 
 

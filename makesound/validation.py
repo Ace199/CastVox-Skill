@@ -10,7 +10,7 @@ REGIONS = {"cn", "international"}
 AVAILABILITY = {"unknown", "pending_activation", "available", "unavailable", "expired"}
 SETTINGS = {"model", "export_mode", "subtitle_enabled", "subtitle_type", "script_processing", "audio_format", "pause"}
 VOICE_SETTINGS = {"speed", "volume", "pitch", "emotion"}
-SENSITIVE = re.compile(r"api.?key|authorization|password|secret|token|credential", re.I)
+SENSITIVE = re.compile(r"api.?key|access.?key|authorization|password|secret|token|credential", re.I)
 
 
 def no_secrets(value):

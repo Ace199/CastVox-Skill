@@ -25,6 +25,18 @@ playwright-report/
 *.key
 .config/
 local-demo/
+# Local production state, credentials/receipts, and generated deliveries
+/.makesound/
+/outputs/
+/配音/
+# Internal requirements, design history, implementation evidence, old prototypes
+/doc/
+/archive/
+/wireframes/
+/docs/*
+!/docs/usage.md
+!/docs/architecture.md
+*.prompt.txt
 *.log
 .DS_Store
 Thumbs.db

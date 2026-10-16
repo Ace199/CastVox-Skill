@@ -1,4 +1,4 @@
-"""Offline adapters. No real vendor transport is implemented or imported."""
+"""Shared validation and Fake adapter. Real adapters require explicit injection."""
 import math
 import wave
 from decimal import Decimal
@@ -14,11 +14,25 @@ FAKE_CAPABILITIES = {
               "unit": "semitone", "api_field": "pitch"},
 }
 
+MINIMAX_DOCUMENTED_MODELS = frozenset({'speech-2.8-hd', 'speech-2.8-turbo', 'speech-2.6-hd', 'speech-2.6-turbo',
+                                      'speech-02-hd', 'speech-02-turbo', 'speech-01-hd', 'speech-01-turbo'})
+MINIMAX_CAPABILITIES = {
+    'speed': {'supported': True, 'verified': True, 'min': .5, 'max': 2, 'step': 'any', 'range_step': .01,
+              'neutral': 1.0, 'unit': '倍', 'api_field': 'speed', 'verification': 'official_docs_and_contract_tests',
+              'live_verified': False, 'source_url': 'https://platform.minimax.cn/docs/api-reference/speech-t2a-http'},
+    'pitch': {'supported': True, 'verified': True, 'min': -12, 'max': 12, 'step': 1,
+              'neutral': 0, 'unit': '整数刻度', 'api_field': 'pitch', 'verification': 'official_docs_and_contract_tests',
+              'live_verified': False, 'source_url': 'https://platform.minimax.cn/docs/api-reference/speech-t2a-http'},
+}
+
 
 def capabilities(source):
-    # Fake's contract is tested locally. No claim about a real model's ranges.
     import copy
-    return copy.deepcopy(FAKE_CAPABILITIES) if source["provider"] == "fake" else {}
+    if source['provider'] == 'fake':
+        return copy.deepcopy(FAKE_CAPABILITIES)
+    if source['provider'] == 'minimax' and source['region'] == 'cn' and source['model'] in MINIMAX_DOCUMENTED_MODELS:
+        return copy.deepcopy(MINIMAX_CAPABILITIES)
+    return {}
 
 
 def source_valid(source):
@@ -49,9 +63,13 @@ def effective(source, saved=None, override=None):
         cap = caps[key]
         require(type(val) in (int, float) and math.isfinite(val)
                 and cap["min"] <= val <= cap["max"], "parameter_range", "Parameter is outside verified range.")
-        require((Decimal(str(val)) - Decimal(str(cap["min"]))) % Decimal(str(cap["step"])) == 0,
+        require(cap['step'] == 'any' or (Decimal(str(val)) - Decimal(str(cap["min"]))) % Decimal(str(cap["step"])) == 0,
                 "parameter_step", "Parameter does not match verified step.")
     for key, cap in caps.items():
+        # Real legacy records/snapshots intentionally omitted Provider defaults.
+        # Do not rewrite those to explicit values when adding new descriptors.
+        if source['provider'] != 'fake' and key not in values:
+            continue
         raw = values.get(key, cap["neutral"])
         out[key] = float(raw) if key == "speed" else int(raw)
     return out
@@ -99,7 +117,24 @@ class FakeProvider:
         return {"duration_seconds": duration(path), "speech_seconds": speech_frames / rate}
 
 
-def adapter_for(source, fake):
+def adapter_for(source, fake, minimax=None):
     if source["provider"] == "fake":
         return fake
+    if source['provider'] == 'minimax' and minimax is not None:
+        return minimax
     raise MakeSoundError("provider_not_implemented", "Provider synthesis adapter is not implemented; no fallback was selected.")
+
+
+def performance_directives(source, directives=None):
+    directives = {} if directives is None else directives
+    require(isinstance(directives, dict) and set(directives) <= {'emotion'},
+            'unsupported_directive', 'Only documented emotion directives are supported.')
+    if not directives:
+        return {}
+    allowed = {'happy', 'sad', 'angry', 'fearful', 'disgusted', 'surprised', 'calm'}
+    if source['model'] in {'speech-2.6-hd', 'speech-2.6-turbo'}:
+        allowed |= {'fluent', 'whisper'}
+    require(source['provider'] == 'minimax' and source['model'] in MINIMAX_DOCUMENTED_MODELS
+            and isinstance(directives.get('emotion'), str) and directives['emotion'] in allowed,
+            'unsupported_directive', 'Emotion is unsupported by the selected model.')
+    return dict(directives)

@@ -2,7 +2,7 @@ import { activeVoices, previewStatus, resolveRole, defaultVoice, slots, slotName
 import { voicePortrait } from './avatars.js';
 const element = (tag, className, value) => { const node = document.createElement(tag); node.className = className; if (value !== undefined) node.textContent = value; return node; };
 const button = (className, label, value) => { const node = element('button', className, value); node.type = 'button'; node.setAttribute('aria-label', label); return node; };
-const portrait = (file, className = 'voice-avatar') => { const frame = element('span', `avatar-frame ${className}-frame`), img = element('img', className); img.src = `assets/${file}`; img.alt = ''; img.width = 44; img.height = 44; frame.append(img); return frame; };
+const portrait = (file, className = 'voice-avatar') => { const frame = element('span', `avatar-frame ${className}-frame`), img = element('img', className); img.src = `assets/${file}`; img.alt = ''; img.onerror = () => { img.remove(); frame.textContent = '?'; frame.style.background = '#ddd'; }; img.width = 44; img.height = 44; frame.append(img); return frame; };
 export function mountSections(root, store, controller, log, player) {
   const list = root.querySelector('#voice-list'), strip = root.querySelector('#role-strip');
   let librarySignature = '', roleSignature = ''; const timers = new Map();
@@ -17,7 +17,7 @@ export function mountSections(root, store, controller, log, player) {
     const appearance = element('section', 'role-detail-section');
     appearance.append(element('strong', '', '角色形象'), element('p', '', role.description || '暂无角色形象信息'));
     const recommendation = element('section', 'role-detail-section');
-    recommendation.append(element('strong', '', '推荐声音'), element('p', '', role.voice_recommendation || '暂无推荐声音信息'));
+    recommendation.append(element('strong', '', '推荐声音'), element('p', '', (role.recommended_project_voice_id && (!store.getState().data.voices[role.recommended_project_voice_id] || store.getState().data.voices[role.recommended_project_voice_id].deleted) ? '推荐项目声音已不可用' : role.voice_recommendation) || '暂无推荐声音信息'));
     columns.append(appearance, recommendation);
     content.append(title, columns);
     const close = button('role-detail-close', '关闭角色信息', '×');
@@ -51,12 +51,12 @@ export function mountSections(root, store, controller, log, player) {
           const card = element('article', 'project-voice-card'); card.dataset.voiceId = voice.id;
           const body = button('voice-body', `分配声音：${voice.name}`), marker = element('span', 'voice-role-markers'), avatar = portrait(voicePortrait(voice.id, voice.category));
           const name = element('span', 'voice-name', voice.name), labelBox = element('span', 'voice-label'); labelBox.append(name, element('small', 'card-preview-status')); body.append(marker, avatar, labelBox); body.title = `${voice.name} / ${voice.source.provider} / ${voice.source.model} / ${voice.source.voice_id}`;
-          body.onclick = () => { const before = store.getState(); store.assign(voice.id); log.record({ name: before.activeDefaultSlot ? 'defaults.draft.selected' : 'task.voice.assign', objectId: voice.id, result: before.activeDefaultSlot ? '仅更新默认草稿，需显式确认保存；角色未改变' : before.activeRoleId ? '仅分配当前角色，默认不变' : '未选角色，没有分配' }); };
+          body.onclick = () => { const before = store.getState(); void controller.assign(voice.id); log.record({ name: before.activeDefaultSlot ? 'defaults.draft.selected' : 'task.voice.assign', objectId: voice.id, result: before.activeDefaultSlot ? '仅更新默认草稿，需显式确认保存；角色未改变' : before.activeRoleId ? '仅分配当前角色，默认不变' : '未选角色，没有分配' }); };
           const play = button('voice-preview', `播放 ${voice.name}`, '▶'); play.onclick = event => { event.stopPropagation(); void player.toggle(voice.id); };
           const settings = button('voice-settings', `设置 ${voice.name}`, '⚙'); settings.onclick = event => { event.stopPropagation(); controller.openSettings(voice.id); if (matchMedia('(max-width:950px)').matches) root.querySelector('.editor-panel').scrollIntoView({ block: 'start' }); };
           const remove = button('voice-delete', `删除 ${voice.name}`, '×'); remove.title = '仅从项目库隐藏；键盘也可按 Delete'; remove.onclick = event => { event.stopPropagation(); controller.requestDelete(voice.id); };
           card.append(body, play, settings, remove);
-          card.addEventListener('pointerenter', event => { if (event.pointerType === 'touch') return; const old = timers.get(voice.id); if (old) clearTimeout(old); timers.set(voice.id, setTimeout(() => { card.classList.add('delete-visible'); timers.delete(voice.id); }, 2000)); });
+          card.addEventListener('pointerenter', event => { if (event.pointerType === 'touch') return; const old = timers.get(voice.id); if (old) clearTimeout(old); timers.set(voice.id, setTimeout(() => { card.classList.add('delete-visible'); timers.delete(voice.id); }, 1000)); });
           card.addEventListener('pointerleave', () => { clearTimeout(timers.get(voice.id)); timers.delete(voice.id); card.classList.remove('delete-visible'); });
           card.addEventListener('keydown', event => { if (event.key === 'Delete') { event.preventDefault(); event.stopPropagation(); controller.requestDelete(voice.id); } });
           row.append(card);

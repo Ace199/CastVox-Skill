@@ -1,0 +1,26 @@
+{
+  "roles": ["narrator", "guest"],
+  "role_metadata": {
+    "narrator": {
+      "display_name": "讲解者",
+      "appearance_summary": "离线示例中的讲解角色",
+      "recommended_voice_description": "清晰、平静"
+    },
+    "guest": { "display_name": "来宾" }
+  },
+  "segments": [
+    {
+      "paragraph_id": "p1",
+      "sentence_id": "s1",
+      "role_id": "narrator",
+      "text": "这是离线链路的第一句示例。",
+      "pause_ms": 300
+    },
+    {
+      "paragraph_id": "p1",
+      "sentence_id": "s2",
+      "role_id": "guest",
+      "text": "这是第二个角色的示例。"
+    }
+  ]
+}

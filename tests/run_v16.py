@@ -15,6 +15,9 @@ from tests.run_m1 import RecordedResult
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--include-integration", action="store_true", help="Also record V1.8 Studio/Fake handoff regressions")
+    parser.add_argument('--include-media', action='store_true', help='Also record opt-in MiniMax contract and local MP3 tests; no live Provider calls')
+    parser.add_argument('--include-add-parameters', action='store_true', help='Also record add-voice speed/pitch persistence and contract regressions')
     parser.add_argument("--output", type=Path, default=Path("docs/V1.6_Test_Results.json"))
     args = parser.parse_args()
     spec = importlib.util.spec_from_file_location("provider_config_tests", Path(__file__).resolve().parents[1] / "web/tests/test_provider_config.py")
@@ -23,6 +26,12 @@ def main():
     groups = {"M1_original": ["tests.unit.test_m1", "tests.integration.test_cli"],
               "V1.6_core": ["tests.unit.test_v16", "tests.unit.test_model_redaction"],
               "V1.6_HTTP": ["tests.integration.test_v16_http"], "provider_config_existing": [provider_tests]}
+    if args.include_integration:
+        groups["V1.8_handoff"] = ["tests.integration.test_studio_handoff"]
+    if args.include_media:
+        groups['MiniMax_media_offline'] = ['tests.integration.test_minimax_media']
+    if args.include_add_parameters:
+        groups['Add_voice_parameters'] = ['tests.integration.test_add_voice_settings']
     summary = {"python": platform.python_version(), "os": platform.system(), "paid_api_calls": 0,
                "network_policy": "non-loopback connections blocked; CLI subprocesses block all connections", "groups": {}}
     original_connect = socket.socket.connect

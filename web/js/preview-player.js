@@ -1,8 +1,8 @@
 import { previewStatus } from './voice-model.js';
 
-export function createPreviewPlayer(store, log, makeAudio = url => new Audio(url)) {
-  let audio = null, currentId = null, sampleId = null, operation = 0;
-  const retire = () => { operation++; if (audio) { audio.onended = null; audio.onerror = null; audio.pause(); } audio = null; currentId = null; sampleId = null; };
+export function createPreviewPlayer(store, log, makeAudio = url => new Audio(url), fetchBlob) {
+  let audio = null, currentId = null, sampleId = null, operation = 0, blobUrl = null;
+  const retire = () => { operation++; if (audio) { audio.onended = null; audio.onerror = null; audio.pause(); } if (blobUrl) URL.revokeObjectURL(blobUrl); blobUrl = null; audio = null; currentId = null; sampleId = null; };
   const stop = () => { retire(); store.update({ player: { voiceId: null, status: 'idle', sampleId: null, error: '' } }); };
   const error = (id, sample, token) => {
     if (token !== operation) return;
@@ -22,10 +22,21 @@ export function createPreviewPlayer(store, log, makeAudio = url => new Audio(url
         audio.pause(); store.update({ player: { ...state.player, status: 'paused' } }); return;
       }
       const url = new URL(voice.preview.url ?? voice.preview.path, location.href);
-      const safe = url.origin === location.origin && /^\/(assets\/|api\/previews\/)/.test(url.pathname) && !url.search && !url.hash;
+      const safe = url.origin === location.origin && (fetchBlob ? url.pathname === `/api/v16/preview/${id}` : /^\/(assets\/|api\/previews\/)/.test(url.pathname)) && !url.search && !url.hash;
       if (!safe) { store.update({ player: { voiceId: id, sampleId: voice.preview.sample_id, status: 'error', error: '未提供合法本地试听地址' } }); return; }
       if (currentId !== id || sampleId !== voice.preview.sample_id || !audio) {
-        retire(); currentId = id; sampleId = voice.preview.sample_id; audio = makeAudio(url.href);
+        retire(); currentId = id; sampleId = voice.preview.sample_id;
+        const loadingToken = operation;
+        try {
+          let source = url.href;
+          if (fetchBlob) {
+            store.update({ player: { voiceId: id, sampleId, status: 'loading', error: '' } });
+            const blob = await fetchBlob(id);
+            if (loadingToken !== operation) return;
+            blobUrl = URL.createObjectURL(blob); source = blobUrl;
+          }
+          audio = makeAudio(source);
+        } catch { error(id, voice.preview.sample_id, loadingToken); return; }
       }
       const token = ++operation, sample = sampleId;
       audio.onended = () => { if (token === operation) store.update({ player: { voiceId: id, sampleId: sample, status: 'ended', error: '' } }); };

@@ -10,9 +10,7 @@ def config_path(provider, config_dir=None):
         raise ValueError('未知厂商')
     if config_dir is not None:
         return Path(config_dir) / provider / 'config.json'
-    if provider == 'minimax':
-        return Path.home() / '.config' / 'minimax' / 'config.json'
-    return None
+    return Path.home() / '.config' / provider / 'config.json'
 
 
 def launch_editor(path):
@@ -25,19 +23,24 @@ def launch_editor(path):
 
 def open_config(provider, config_dir=None, opener=None):
     path = config_path(provider, config_dir)
-    if path is None:
-        raise ValueError('火山引擎配置路径尚未接入')
     created = False
     if not path.exists():
-        if provider != 'minimax':
-            raise ValueError('火山引擎配置模板尚未接入，请先配置其文件路径和格式')
         path.parent.mkdir(parents=True, exist_ok=True)
         try:
             # Exclusive create also protects an existing file in concurrent requests.
             with path.open('x', encoding='utf-8') as file:
-                json.dump({'api_key': 'write your own keys', 'region': 'cn',
+                template = {'api_key': 'YOUR_API_KEY_HERE', 'region': 'cn',
                            'base_url': 'https://api.minimax.cn',
-                           'models': [], 'default_model': None}, file, ensure_ascii=False, indent=2)
+                           'models': ['speech-2.8-hd', 'speech-2.8-turbo',
+                                      'speech-2.6-hd', 'speech-2.6-turbo',
+                                      'speech-02-hd', 'speech-02-turbo',
+                                      'speech-01-hd', 'speech-01-turbo'],
+                           'default_model': 'speech-2.8-hd'} if provider == 'minimax' else {
+                    'auth_mode': 'api_key', 'api_key': 'YOUR_VOLCENGINE_API_KEY_HERE',
+                    'region': 'cn', 'base_url': 'https://openspeech.bytedance.com',
+                    'tts_endpoint': '/api/v3/tts/unidirectional', 'resource_id': 'seed-tts-2.0',
+                    'models': ['seed-tts-2.0-standard'], 'default_model': 'seed-tts-2.0-standard'}
+                json.dump(template, file, ensure_ascii=False, indent=2)
                 file.write('\n')
             created = True
         except FileExistsError:
@@ -50,3 +53,14 @@ def open_config(provider, config_dir=None, opener=None):
         return {'ok': False, 'created': created, 'message': ('配置已创建，但' if created else '') + '无法打开本地编辑器，请检查系统权限后重试'}
     return {'ok': True, 'created': created,
             'message': '已创建配置并请求在编辑器中打开；填写后点击“重新读取模型”' if created else '已请求在编辑器中打开配置；保存后点击“重新读取模型”'}
+
+
+def open_default_config(project_root, opener=None):
+    path = Path(project_root).resolve() / '.makesound' / 'preset.v1.6.json'
+    if not path.is_file():
+        return {'ok': False, 'message': '默认配置尚未创建；请先重新读取项目。'}
+    try:
+        (opener or launch_editor)(path)
+    except OSError:
+        return {'ok': False, 'message': '无法打开本地编辑器，请检查系统权限后重试'}
+    return {'ok': True, 'message': '已请求在编辑器中打开默认配置；保存后点击“重新读取项目”'}
