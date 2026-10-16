@@ -19,9 +19,9 @@ python studio_v16_server.py --project '<existing-absolute-project-path>' --fake 
 ## 测试
 
 ```powershell
-node --test web/tests/v16.test.js
+node --test web/tests/v16.test.js web/tests/i18n.test.js web/tests/delete-hover.test.js
 python web/tests/test_config_editor.py
 python web/tests/test_provider_config.py
 ```
 
-浏览器测试需预先准备 Playwright/Chromium，可运行 `node web/tests/browser-v16.cjs`。本机依赖位置用 `NODE_PATH`、`STUDIO_CHROMIUM` 设置，不在源码硬编码个人目录。浏览器截图和测试报告属于本地过程产物，不提交仓库。`live-ui-smoke.cjs` 需先启动服务并设置正确的 `STUDIO_URL`；运行前查看脚本的具体操作范围。
+浏览器测试需预先准备 Playwright/Chromium，可运行 `node web/tests/browser-v16.cjs`、`node web/tests/bilingual.cjs` 和 `node web/tests/defaults-completion.cjs`，分别覆盖综合界面、中英文及默认确认完成流程。本机依赖位置用 `NODE_PATH`、`STUDIO_CHROMIUM` 设置，不在源码硬编码个人目录。浏览器截图和测试报告属于本地过程产物，不提交仓库。`live-ui-smoke.cjs` 需先启动服务并设置正确的 `STUDIO_URL`；运行前查看脚本的具体操作范围。

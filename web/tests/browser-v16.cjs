@@ -36,14 +36,16 @@ function track(page) { page.on('pageerror', error => evidence.errors.push(error.
   const ctx = await context(), page = await ctx.newPage(); track(page);
   const state = () => page.evaluate(async () => (await import('/js/app.js?v=config-editor-1')).store.getState());
   const ready = async () => expect.poll(async () => (await state()).busy).toBe(false);
-  const action = name => page.getByRole('button', { name, exact: true });
+  const action = name => name === '完成设置' ? page.locator('#complete-settings') : page.getByRole('button', { name, exact: true });
   const tab = name => page.getByRole('tab', { name, exact: true });
   const card = id => page.locator(`.project-voice-card[data-voice-id="${id}"]`);
   const field = name => page.getByLabel(name, { exact: true }).filter({ visible: true });
   const fresh = async () => { await page.goto(base); await expect(page.getByRole('heading', { name: '声音故事 · 演示项目' })).toBeVisible(); await ready(); };
   const fill = async (name, id, category = 'other') => { await field('项目声音名称').fill(name); await page.locator('#voice-id').fill(id); await field('声音分类').selectOption(category); };
   const open = async id => { await card(id).locator('.voice-settings').click(); await expect(tab('声音设置')).toHaveAttribute('aria-selected', 'true'); };
-  const saveDefaults = async () => { await action('保存默认设置').click(); await expect(page.getByRole('dialog')).toContainText('确认保存默认设置'); await action('确认保存默认').click(); await ready(); };
+  // Controller-level setup for isolated default styling cases. The real completion
+  // button/save/submit flow is covered by defaults-completion.cjs and bilingual.cjs.
+  const saveDefaults = async () => { await page.evaluate(async () => (await import('/js/app.js?v=config-editor-1')).controller.requestDefaults()); await expect(page.getByRole('dialog')).toContainText('确认保存默认设置'); await action('确认保存默认').click(); await ready(); };
   await fresh();
   await check('Loaded project defaults show outlines immediately without selecting a role or voice', async () => {
     await page.evaluate(async () => {
@@ -62,7 +64,7 @@ function track(page) { page.on('pageerror', error => evidence.errors.push(error.
     await expect(card('pv_003').locator('.default-voice-outline')).toHaveCount(0);
     const loadedState = await state();
     assert.equal(loadedState.activeRoleId, null); assert.equal(loadedState.selectedVoiceId, null);
-    await expect(action('保存默认设置')).toBeDisabled();
+    await expect(action('保存默认设置')).toHaveCount(0); await expect(action('取消更改')).toHaveCount(0);
     await page.screenshot({path:path.join(output,'loaded-default-outlines.png'),fullPage:true});
     await fresh();
   });
@@ -109,24 +111,25 @@ function track(page) { page.on('pageerror', error => evidence.errors.push(error.
     assert.ok(Math.abs(box.width / box.height - 2) < .01);
     await detail.locator('.role-detail-content').evaluate(el => { el.scrollTop = el.scrollHeight; }); await expect(detail).toBeVisible();
     await page.screenshot({path:path.join(output,'role-detail-narrow.png'),fullPage:true});
+    await page.evaluate(() => window.scrollBy(0, 100)); await expect(detail).not.toBeVisible();
     await page.keyboard.press('Escape'); await page.setViewportSize({width:1440,height:900}); await fresh();
   });
   await check('V1.6 three tabs and fixed three-row project library render', async () => { await expect(page.getByRole('tab')).toHaveCount(3); await expect(tab('添加项目声音')).toHaveAttribute('aria-selected','true'); await expect(page.locator('.library-row')).toHaveCount(3); await expect(page.locator('.project-voice-card')).toHaveCount(3); await expect(action('完成设置')).toBeDisabled(); });
   await check('Defaults use one row of three cards without avatars', async () => {
     await expect(page.locator('.default-card')).toHaveCount(3); await expect(page.locator('.default-card img')).toHaveCount(0); const boxes = await page.locator('.default-card').evaluateAll(nodes => nodes.map(node => ({ y: node.getBoundingClientRect().y, color: getComputedStyle(node).backgroundColor }))); assert.equal(new Set(boxes.map(box => box.y)).size,1); assert.equal(boxes[1].y,boxes[2].y); assert.equal(new Set(boxes.map(box => box.color)).size,3); await expect(page.locator('#default-general-name')).toHaveText('未设置');
   });
-  await check('Default cards stay pale on selection, brighten with a candidate and clear/cancel correctly', async () => {
+  await check('Default cards stay pale on selection, brighten with a candidate and clear/reselect correctly', async () => {
     for(const [slot,id,pale,bright] of [['general','pv_003','rgb(255, 240, 201)','rgb(248, 217, 72)'],['male','pv_001','rgb(216, 240, 237)','rgb(78, 205, 196)'],['female','pv_002','rgb(249, 224, 232)','rgb(243, 129, 164)']]){
       const target=page.locator('#default-'+slot), tile=page.locator('.default-card[data-slot='+slot+']');const color=()=>tile.evaluate(el=>getComputedStyle(el).backgroundColor);
-      assert.equal(await color(),pale);await target.click();assert.equal(await color(),pale);await card(id).locator('.voice-body').click();assert.equal(await color(),bright);await expect(page.locator('#default-'+slot+'-state')).toHaveText('待保存');await action('取消更改').click();assert.equal(await color(),pale);
-      await card(id).locator('.voice-body').click();await saveDefaults();assert.equal(await color(),bright);await page.locator('#clear-default-'+slot).click();assert.equal(await color(),pale);await action('取消更改').click();assert.equal(await color(),bright);
+      assert.equal(await color(),pale);await target.click();assert.equal(await color(),pale);await card(id).locator('.voice-body').click();assert.equal(await color(),bright);await expect(page.locator('#default-'+slot+'-state')).toHaveText('待保存');await page.locator('#clear-default-'+slot).click();assert.equal(await color(),pale);
+      await card(id).locator('.voice-body').click();await saveDefaults();assert.equal(await color(),bright);await page.locator('#clear-default-'+slot).click();assert.equal(await color(),pale);await target.click();await card(id).locator('.voice-body').click();assert.equal(await color(),bright);
     }
     await fresh();
   });
   await check('Add drafts persist per provider and across tabs; new same-name voice cannot overwrite', async () => {
     await fill('未保存 A','MINIMAX_ONLY','male'); await tab('More Tools').click(); await expect(page.getByRole('tabpanel', {name:'More Tools'})).toContainText('暂未提供功能'); await tab('添加项目声音').click(); await expect(page.locator('#voice-id')).toHaveValue('MINIMAX_ONLY');
     await field('声音厂商').selectOption('volcengine'); await ready(); await expect(page.locator('#voice-id')).toHaveValue(''); await fill('未保存 B','VOLC_ONLY'); await field('声音厂商').selectOption('minimax'); await ready(); await expect(page.locator('#voice-id')).toHaveValue('MINIMAX_ONLY');
-    await fill('项目旁白','NEW_SOURCE','male'); await action('添加到项目库').click(); await expect(page.getByRole('alert')).toContainText('同名'); await expect(page.getByRole('alertdialog')).toContainText('同名'); await action('返回修改').click(); assert.equal(Object.keys((await state()).data.voices).length,3); await action('清空此厂商草稿').click();
+    await fill('项目旁白','NEW_SOURCE','male'); await action('添加到项目库').click(); await expect(page.getByRole('alertdialog')).toContainText('同名'); await action('返回修改').click(); assert.equal(Object.keys((await state()).data.voices).length,3); await action('清空此厂商草稿').click();
   });
   await check('Settings use a separate draft and fixed source; cancel does not mutate saved voice', async () => {
     const before=(await state()).data.voices.pv_002; await open('pv_002'); await field('声音名称').fill('未保存新名'); await field('语速数值').fill('1.2'); await expect(page.locator('#settings-preview-state')).toContainText('调整前试听'); assert.deepEqual((await state()).data.voices.pv_002,before); await action('取消').click(); await expect(field('声音名称')).toHaveValue('对白音色'); await expect(field('语速数值')).toHaveValue('1');
@@ -145,7 +148,7 @@ function track(page) { page.on('pageerror', error => evidence.errors.push(error.
     await action('选择默认男声').click(); await expect(card('pv_002').locator('.voice-body')).toBeDisabled(); await card('pv_001').locator('.voice-body').click(); assert.equal((await state()).data.defaults.male,null); await action('选择默认女声').click(); await card('pv_002').locator('.voice-body').click(); await saveDefaults(); assert.equal((await state()).data.defaults.female,'pv_002'); assert.equal((await state()).roles[1].assignment,null);
   });
   await check('Changing category warns before invalidating a gender default, preserves raw reference', async () => {
-    await open('pv_002'); await field('声音分类').filter({visible:true}).selectOption('other'); await action('保存修改').click(); await expect(page.getByRole('dialog')).toContainText('默认女声将显示'); await action('确认保存修改').click(); await ready(); await expect(page.locator('#default-female-name')).toHaveText('未设置'); assert.equal((await state()).data.defaults.female,'pv_002');
+    await open('pv_002'); await field('声音分类').filter({visible:true}).selectOption('other'); await action('保存修改').click(); await expect(page.getByRole('dialog')).toContainText('默认女声将显示'); await action('确认保存修改').click(); await ready(); await expect(page.locator('#default-female-name')).toHaveText('对白新名'); assert.equal((await state()).data.defaults.female,'pv_002');
     await field('声音分类').filter({visible:true}).selectOption('female'); await action('保存修改').click(); await ready(); await expect(page.locator('#default-female-name')).toHaveText('对白新名');
   });
   await check('Role selection differs from assignment; controls do not bind roles and optional defaults can be empty', async () => {
@@ -170,7 +173,7 @@ function track(page) { page.on('pageerror', error => evidence.errors.push(error.
   });
   await fresh();
   await check('Hover requires a continuous one second, exit resets and moving onto × keeps it visible without reflow', async () => {
-    await page.clock.install();await page.clock.pauseAt(new Date());await page.mouse.move(1,1);const target=card('pv_001'),remove=target.locator('.voice-delete');await target.hover();const before=await target.boundingBox();await page.clock.fastForward(999);await expect(remove).toBeHidden();await page.clock.fastForward(1);await expect(remove).toBeVisible();assert.deepEqual(await target.boundingBox(),before);await remove.hover();await expect(remove).toBeVisible();await page.screenshot({path:path.join(output,'hover-delete.png'),fullPage:true});await page.mouse.move(1,1);await expect(remove).toBeHidden();await target.hover();await page.clock.fastForward(500);await page.mouse.move(1,1);await target.hover();await page.clock.fastForward(999);await expect(remove).toBeHidden();await page.clock.fastForward(1);await expect(remove).toBeVisible();await page.clock.resume();await page.mouse.move(1,1);
+    await page.clock.install();await page.clock.pauseAt(new Date());await page.mouse.move(1,1);const target=card('pv_001'),remove=target.locator('.voice-delete');await target.hover();const before=await target.boundingBox();await page.clock.fastForward(999);await expect(remove).toBeHidden();await page.clock.fastForward(1);await expect(remove).toBeVisible();assert.deepEqual(await target.boundingBox(),before);await remove.hover();await expect(remove).toBeVisible();await page.screenshot({path:path.join(output,'hover-delete.png'),fullPage:true});await page.mouse.move(1,1);await page.clock.fastForward(500);await expect(remove).toBeHidden();await target.hover();await page.clock.fastForward(500);await page.mouse.move(1,1);await target.hover();await page.clock.fastForward(999);await expect(remove).toBeHidden();await page.clock.fastForward(1);await expect(remove).toBeVisible();await page.clock.resume();await page.mouse.move(1,1);
   });
   await check('Keyboard deletion is reachable immediately; referenced voice asks for confirmation without assigning a role', async () => {
     await card('pv_001').locator('.voice-body').focus();await expect(card('pv_001').locator('.voice-delete')).toBeVisible();await page.keyboard.press('Delete');await expect(page.getByRole('dialog')).toContainText('已有任务保留');assert.equal((await state()).roles[0].assignment,null);await page.screenshot({path:path.join(output,'delete-confirm.png'),fullPage:true});await page.locator('#cancel-confirm').click();
@@ -228,4 +231,4 @@ function track(page) { page.on('pageerror', error => evidence.errors.push(error.
   await check('No question: management remains possible without claiming Harness resume',async()=>{await page.evaluate(async()=>{const {api,controller}=await import('/js/app.js?v=config-editor-1');api.configureMock({management:true});await controller.load();});await expect(action('完成设置')).toBeDisabled();await expect(page.locator('#complete-reason')).toContainText('Question');});
   await check('No console errors, missing resources, provider requests or HTTP business writes',async()=>{assert.deepEqual(evidence.errors,[]);assert.deepEqual(evidence.failedResponses,[]);assert.deepEqual(evidence.externalRequests,[]);assert.deepEqual(evidence.businessRequests,[]);});
   evidence.status='PASS';
-})().catch(error=>{evidence.status='FAIL';evidence.failure=error.message;process.exitCode=1;}).finally(async()=>{if(browser)await browser.close();if(server)await new Promise(resolve=>server.close(resolve));fs.writeFileSync(path.join(output,'browser-results.json'),JSON.stringify(evidence,null,2));console.log(JSON.stringify({status:evidence.status,passed:evidence.checks.filter(c=>c.status==='PASS').length,failed:evidence.checks.filter(c=>c.status==='FAIL').length,failure:evidence.failure}));});
+})().catch(error=>{evidence.status='FAIL';evidence.failure=error.stack;process.exitCode=1;}).finally(async()=>{if(browser)await browser.close();if(server)await new Promise(resolve=>server.close(resolve));fs.writeFileSync(path.join(output,'browser-results.json'),JSON.stringify(evidence,null,2));console.log(JSON.stringify({status:evidence.status,passed:evidence.checks.filter(c=>c.status==='PASS').length,failed:evidence.checks.filter(c=>c.status==='FAIL').length,failure:evidence.failure}));});

@@ -1,3 +1,4 @@
+import { t, msg } from './i18n.js';
 import { session } from './session.js';
 export async function request(path, body, binary = false) {
   const headers = {};
@@ -11,11 +12,11 @@ export async function request(path, body, binary = false) {
     cache: 'no-store', credentials: 'same-origin', ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
   if (!response.ok) {
     const result = await response.json().catch(() => ({}));
-    const messages = { revision_conflict: '项目已被其他页面或任务修改；请重新读取，检查保留的草稿后再次保存。',
-      answer_immutable: '回答已提交，请重新读取查看结果。', forbidden: '会话失效或请求被拒绝，请刷新页面。',
-      name_conflict: '项目内已有同名声音，请更换名称。', question_expired: '任务问题已过期，请在 Agent 中重新发起。',
-      voice_unavailable: '声音已删除或不可用，请重新选择。', migration_required: '旧项目需要先显式迁移，请保留备份后操作。' };
-    throw Object.assign(new Error(messages[result.error] ?? `操作未完成（${result.error ?? response.status}），请检查配置。`), { code: result.error });
+    const messages = { revision_conflict: t("项目已被其他页面或任务修改；请重新读取，检查保留的草稿后再次保存。"),
+      answer_immutable: t("回答已提交，请重新读取查看结果。"), forbidden: t("会话失效或请求被拒绝，请刷新页面。"),
+      name_conflict: t("项目内已有同名声音，请更换名称。"), question_expired: t("任务问题已过期，请在 Agent 中重新发起。"),
+      voice_unavailable: t("声音已删除或不可用，请重新选择。"), migration_required: t("旧项目需要先显式迁移，请保留备份后操作。") };
+    throw Object.assign(new Error(messages[result.error] ?? msg`操作未完成（${result.error ?? response.status}），请检查配置。`), { code: result.error });
   }
   return binary ? response.blob() : response.json();
 }

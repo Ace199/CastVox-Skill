@@ -12,20 +12,20 @@
   <title>CastVox · Voice Studio</title>
 </head>
 <body>
-  <a class="skip-link" href="#workspace">跳到声音工作台</a>
-  <header><div class="studio-brand"><img class="brand-geometry" src="assets/SoundMaker_UI_Assets/brand_geometry.png" alt="" width="54" height="48"><div><h1>CastVox</h1><span class="eyebrow">VOICE STUDIO / 项目声音配置</span></div></div><p class="brand-tagline">让每个角色都有自己的声音</p><img class="header-decoration" src="assets/SoundMaker_UI_Assets/header_sound_geometry.png" alt="" width="320" height="48"><div class="header-actions"><button id="debug-toggle" aria-expanded="false" aria-controls="debug-panel" hidden>打开 Debug</button></div></header>
-  <main id="workspace" aria-label="声音工作台">
+  <a class="skip-link" data-i18n="跳到声音工作台" href="#workspace">跳到声音工作台</a>
+  <header><div class="studio-brand"><img class="brand-geometry" src="assets/SoundMaker_UI_Assets/brand_geometry.png" alt="" width="54" height="48"><div><h1>CastVox</h1><span class="eyebrow" data-i18n="VOICE STUDIO / 项目声音配置">VOICE STUDIO / 项目声音配置</span></div></div><p class="brand-tagline" data-i18n="让每个角色都有自己的声音">让每个角色都有自己的声音</p><img class="header-decoration" src="assets/SoundMaker_UI_Assets/header_sound_geometry.png" alt="" width="320" height="48"><div class="header-actions"><div id="ui-language" class="language-switch" role="group" aria-label="界面语言"><button type="button" data-language="zh-CN" aria-label="中文" aria-pressed="true" lang="zh-CN">中</button><span aria-hidden="true">/</span><button type="button" data-language="en" aria-label="English" aria-pressed="false" lang="zh-CN">英</button></div><button id="debug-toggle" aria-expanded="false" aria-controls="debug-panel" hidden>打开 Debug</button></div></header>
+  <main id="workspace" aria-label="声音工作台" data-i18n-aria="声音工作台">
     <section class="panel startup-help" aria-labelledby="startup-title">
-      <h2 id="startup-title">工作台尚未加载</h2>
-      <p>请通过本地 HTTP 服务打开，直接双击 HTML 文件无法加载模块。</p>
-      <p>在项目根目录打开终端，执行：</p>
+      <h2 id="startup-title" data-i18n="工作台尚未加载">工作台尚未加载</h2>
+      <p data-i18n="请通过本地 HTTP 服务打开，直接双击 HTML 文件无法加载模块。">请通过本地 HTTP 服务打开，直接双击 HTML 文件无法加载模块。</p>
+      <p data-i18n="在项目根目录打开终端，执行：">在项目根目录打开终端，执行：</p>
       <pre>python studio_server.py --port 8766</pre>
-      <p>保持终端运行，再打开 <a href="http://127.0.0.1:8766/">http://127.0.0.1:8766/</a>。</p>
-      <p class="muted">如果已经通过该地址打开，请检查本地服务是否仍在运行，然后刷新页面。</p>
+      <p><span data-i18n="保持终端运行，再打开">保持终端运行，再打开</span> <a href="http://127.0.0.1:8766/">http://127.0.0.1:8766/</a>。</p>
+      <p class="muted" data-i18n="如果已经通过该地址打开，请检查本地服务是否仍在运行，然后刷新页面。">如果已经通过该地址打开，请检查本地服务是否仍在运行，然后刷新页面。</p>
     </section>
   </main>
   <aside id="debug-panel" aria-labelledby="debug-title" hidden></aside>
-  <footer>用户选声音 → Agent 理解表演 → Python 可靠生成。</footer>
+  <footer data-i18n="用户选声音 → Agent 理解表演 → Python 可靠生成。">用户选声音 → Agent 理解表演 → Python 可靠生成。</footer>
   <script type="module" src="js/app.js?v=config-editor-1"></script>
 </body>
 </html>

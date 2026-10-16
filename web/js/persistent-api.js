@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 import { request } from './transport.js';
 import { session } from './session.js';
 import { fetchProviders } from './providers.js';
@@ -46,7 +47,7 @@ export function createPersistentApi(descriptors) {
       return edit(id, { name: draft.name.normalize('NFC').trim(), category: draft.category, settings }, expectedRevision);
     },
     async saveDefaults({ defaults, expectedRevision, confirmed }) {
-      if (!confirmed) throw new Error('请确认保存默认设置。');
+      if (!confirmed) throw new Error(t("请确认保存默认设置。"));
       const changes = Object.fromEntries(Object.entries(defaults).filter(([slot, id]) => lastData?.defaults[slot] !== id));
       await request('/api/v16/defaults', { defaults: changes, revision: expectedRevision }); return load();
     },

@@ -12,9 +12,11 @@ import urllib.request
 from .core_v16 import ProjectCore
 from .questions import Questions
 from .errors import require
+from .ui_locale import resolve_ui_language
 
 
-def start(core, question_id, *, codex_thread=None, allow_fake=False):
+def start(core, question_id, *, codex_thread=None, allow_fake=False, ui_language=None):
+    language = resolve_ui_language(ui_language)
     question = Questions(core).read(question_id)
     require(question['status'] == 'pending', 'answer_immutable', 'This task already has an answer.')
     from .harness_resume import register_environment, environment_target
@@ -31,7 +33,7 @@ def start(core, question_id, *, codex_thread=None, allow_fake=False):
         with opener.open(url + '/js/session.js', timeout=2) as response:
             module = response.read().decode('utf-8')
         session = json.loads(module.split('Object.freeze(', 1)[1].rsplit(');', 1)[0])
-        return session.get('question_id') == question_id
+        return session if session.get('question_id') == question_id else None
 
     if record.exists():
         saved = json.loads(record.read_text(encoding='utf-8'))
@@ -48,6 +50,8 @@ def start(core, question_id, *, codex_thread=None, allow_fake=False):
         if live:
             require(saved.get('launch_identity') == identity, 'session_mismatch',
                     'Existing Studio was started from a different harness environment. Close that session before launching again.')
+            require(language is None or live.get('ui_language') == language, 'ui_language_mismatch',
+                    'Existing Studio uses a different UI language. Change language in that window or close it before relaunching.')
             register_environment(core, question_id, codex_thread)
             return {k: v for k, v in saved.items() if k != 'launch_identity'}
 
@@ -58,6 +62,8 @@ def start(core, question_id, *, codex_thread=None, allow_fake=False):
             '--question', question_id, '--once']
     if allow_fake:
         args.append('--fake')
+    if language is not None:
+        args.extend(['--ui-language', language])
     options = {'creationflags': subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS} if os.name == 'nt' else {'start_new_session': True}
     out = folder / 'stdout.log'
     with out.open('w', encoding='utf-8') as stdout, (folder / 'stderr.log').open('w', encoding='utf-8') as stderr:
@@ -70,7 +76,8 @@ def start(core, question_id, *, codex_thread=None, allow_fake=False):
             if lines:
                 ready = json.loads(lines[0])
                 if check(ready['url']):
-                    result = {'url': ready['url'], 'question_id': question_id, 'pid': process.pid, 'once': True}
+                    result = {'url': ready['url'], 'question_id': question_id, 'pid': process.pid, 'once': True,
+                              'ui_language': language}
                     record.write_text(json.dumps({**result, 'launch_identity': identity}), encoding='utf-8')
                     return result
             time.sleep(.1)
@@ -81,7 +88,7 @@ def start(core, question_id, *, codex_thread=None, allow_fake=False):
         raise
 
 
-def serve_managed(core, question_id, *, allow_fake=False, on_ready=None, config_dir=None):
+def serve_managed(core, question_id, *, allow_fake=False, on_ready=None, config_dir=None, ui_language=None):
     """Serve in the host-owned command process until submission/host cancellation.
 
     WorkBuddy owns this command as a background task. No orphan child process,
@@ -92,6 +99,7 @@ def serve_managed(core, question_id, *, allow_fake=False, on_ready=None, config_
     from .studio_backend import StudioBackend
     from studio_config_editor import config_path
     from studio_v16_server import create_server
+    language = resolve_ui_language(ui_language)
     question = Questions(core).read(question_id)
     require(question['status'] == 'pending', 'answer_immutable', 'This task already has an answer.')
     identity = environment_target(core=core, qid=question_id)
@@ -105,12 +113,13 @@ def serve_managed(core, question_id, *, allow_fake=False, on_ready=None, config_
         backend = StudioBackend(core, allow_fake=allow_fake, config_dir=directory,
                                 config_paths={p: config_path(p, directory) for p in ('minimax', 'volcengine')})
         backend.core.read()
-        server = create_server(backend, question_id=question_id, config_dir=directory, close_after_answer=True)
+        server = create_server(backend, question_id=question_id, config_dir=directory, close_after_answer=True,
+                               ui_language=language)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         try:
             result = {'url': f'http://127.0.0.1:{server.server_port}', 'question_id': question_id,
-                      'pid': os.getpid(), 'once': True, 'lifecycle': 'host_managed'}
+                      'pid': os.getpid(), 'once': True, 'lifecycle': 'host_managed', 'ui_language': language}
             opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
             with opener.open(result['url'] + '/js/session.js', timeout=3) as response:
                 module = response.read().decode('utf-8')
@@ -141,13 +150,15 @@ def main():
     parser.add_argument('--project', required=True)
     parser.add_argument('--question', required=True)
     parser.add_argument('--codex-thread', help='Exact originating chat UUID; defaults to CODEX_THREAD_ID')
+    parser.add_argument('--ui-language', help='Chinese/English UI override (zh-CN or en); defaults to CASTVOX_UI_LANGUAGE handoff, then Chinese')
     args = parser.parse_args()
     if os.environ.get('WORKBUDDY_CONFIG_DIR'):
         require(not args.codex_thread, 'session_mismatch', 'WorkBuddy cannot target a Codex chat.')
-        result = serve_managed(ProjectCore(args.project), args.question)
+        result = serve_managed(ProjectCore(args.project), args.question, ui_language=args.ui_language)
         print(json.dumps(result), flush=True)
         return
-    print(json.dumps(start(ProjectCore(args.project), args.question, codex_thread=args.codex_thread)), flush=True)
+    print(json.dumps(start(ProjectCore(args.project), args.question, codex_thread=args.codex_thread,
+                           ui_language=args.ui_language)), flush=True)
 
 
 if __name__ == '__main__':

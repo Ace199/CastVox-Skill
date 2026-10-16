@@ -1,12 +1,13 @@
+import { t, msg, escapeHtml, translateMessage } from './i18n.js';
 import { controlCapability } from './capabilities.js';
 
 export function mountAddParameters(root, store) {
-  const fields = [['speed', '语速'], ['pitch', '声调']];
+  const fields = [['speed', t("语速")], ['pitch', t("声调")]];
   root.innerHTML = `<div class="parameter-grid">${fields.map(([key, label]) => `
     <div class="parameter-block"><fieldset id="add-${key}-control" class="parameter-control"><legend>${label}</legend>
-      <input id="add-${key}-range" type="range" aria-label="添加${label}滑块">
-      <div class="parameter-value"><input id="add-${key}" type="number" aria-label="添加${label}数值" aria-describedby="add-${key}-capability">
-      <button id="add-reset-${key}" type="button" class="quiet" aria-label="恢复添加${label}默认值">恢复默认</button></div>
+      <input id="add-${key}-range" type="range" aria-label="${escapeHtml(t("添加{0}滑块", label))}">
+      <div class="parameter-value"><input id="add-${key}" type="number" aria-label="${escapeHtml(t("添加{0}数值", label))}" aria-describedby="add-${key}-capability">
+      <button id="add-reset-${key}" type="button" class="quiet" aria-label="${escapeHtml(t("恢复添加{0}默认值", label))}">${escapeHtml(t("恢复默认"))}</button></div>
     </fieldset><p id="add-${key}-capability" class="small muted parameter-help"></p></div>`).join('')}</div>`;
   const get = id => root.querySelector(`#${id}`);
   for (const [key] of fields) {
@@ -29,8 +30,8 @@ export function mountAddParameters(root, store) {
         for (const attribute of ['min', 'max', 'step']) input.removeAttribute(attribute);
       }
       get(`add-${key}-capability`).textContent = cap.enabled
-        ? `${cap.min}–${cap.max}${cap.unit ? ` ${cap.unit}` : ''}${cap.step === 'any' ? '' : ` · 步长 ${cap.step}`}${cap.live_verified === false ? ' · 文档范围，真实效果未验收' : ''}`
-        : cap.reason;
+        ? `${cap.min}–${cap.max}${cap.unit ? ` ${translateMessage(cap.unit)}` : ''}${cap.step === 'any' ? '' : msg` · 步长 ${cap.step}`}${cap.live_verified === false ? t(" · 文档范围，真实效果未验收") : ''}`
+        : translateMessage(cap.reason);
     }
   };
   render(store.getState());

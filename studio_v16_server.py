@@ -14,6 +14,7 @@ from makesound.core_v16 import ProjectCore
 from makesound.errors import MakeSoundError, require
 from makesound.studio_backend import StudioBackend
 from makesound.storage import _pairs
+from makesound.ui_locale import resolve_ui_language
 from studio_server import Handler as StaticHandler
 
 
@@ -72,7 +73,7 @@ class Handler(StaticHandler):
                 return
             payload = ('export const session = Object.freeze(' + json.dumps({
                 'mode': 'persistent', 'token': self.server.session_token, 'csrf': self.server.csrf_token,
-                'question_id': self.server.question_id}) + ');').encode('utf-8')
+                'question_id': self.server.question_id, 'ui_language': self.server.ui_language}) + ');').encode('utf-8')
             self.send_response(200)
             self.send_header('Content-Type', 'text/javascript; charset=utf-8')
             self.send_header('Content-Length', str(len(payload)))
@@ -166,7 +167,8 @@ class Handler(StaticHandler):
             self._failure(exc)
 
 
-def create_server(backend, port=0, *, question_id=None, config_dir=None, close_after_answer=False):
+def create_server(backend, port=0, *, question_id=None, config_dir=None, close_after_answer=False, ui_language=None):
+    language = resolve_ui_language(ui_language)
     require(not close_after_answer or question_id, 'missing_roles', 'One-session mode requires a Question.')
     if question_id:
         backend.question(question_id)
@@ -177,6 +179,7 @@ def create_server(backend, port=0, *, question_id=None, config_dir=None, close_a
     server.config_dir = config_dir
     server.question_id = question_id
     server.close_after_answer = close_after_answer
+    server.ui_language = language
     return server
 
 
@@ -188,6 +191,7 @@ def main():
     parser.add_argument('--question', help='Existing persisted Question ID supplied by the trusted launcher')
     parser.add_argument('--once', action='store_true', help='Exit after successfully saving this Question answer')
     parser.add_argument('--config-dir', type=Path, help='Explicit isolated provider configuration directory')
+    parser.add_argument('--ui-language', help='Chinese/English UI override (zh-CN or en); defaults to CASTVOX_UI_LANGUAGE handoff, then browser')
     args = parser.parse_args()
     from studio_config_editor import config_path
     directory = args.config_dir.resolve() if args.config_dir else None
@@ -195,7 +199,7 @@ def main():
                             config_paths={p: config_path(p, directory) for p in ('minimax', 'volcengine')})
     backend.core.read()
     server = create_server(backend, args.port, question_id=args.question, config_dir=directory,
-                           close_after_answer=args.once)
+                           close_after_answer=args.once, ui_language=args.ui_language)
     print(json.dumps({"url": f"http://127.0.0.1:{server.server_port}", 'mode': 'persistent',
                       'question_id': args.question, "synthesis": "not_exposed"}), flush=True)
     try:

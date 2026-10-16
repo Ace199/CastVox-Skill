@@ -32,6 +32,7 @@ header .header-decoration{display:block;object-fit:contain;width:clamp(160px,25v
 .project-panel .voice-label .voice-name{font-size:13px;font-weight:800}.card-preview-status{font-size:10px;line-height:1.4;color:var(--muted)}
 .project-panel .voice-preview,.project-panel .voice-settings{width:28px;height:28px;top:14px;background:var(--white);border:var(--line)}
 .project-panel .voice-preview{left:86px}.project-panel .voice-settings{right:7px}
+.project-panel .voice-preview:disabled{background:#d0d3d8;border-color:#a1a7b0;color:#858c96;opacity:1;cursor:not-allowed;box-shadow:none}
 .voice-role-markers{font-size:10px;height:21px;min-width:18px}.voice-role-markers.is-unbound{height:17px;background:#e0e1e2}
 .project-voice-card.is-selected{outline:2px solid var(--blue);outline-offset:3px}
 .project-voice-card button.voice-body:not(:disabled):hover{background:transparent;box-shadow:none}
@@ -240,3 +241,35 @@ header .header-decoration{display:block;object-fit:contain;width:clamp(160px,25v
 #add-error-dialog #close-add-error{position:absolute;top:26px;right:28px;padding:0;width:24px;height:24px;min-height:0;border:0;background:transparent;box-shadow:none;font-size:23px;line-height:24px}
 #dismiss-add-error{font-size:12px;padding:8px 16px}
 @media(max-width:480px){#add-error-dialog{padding:36px 30px 32px}#add-error-dialog h2{font-size:21px}#add-error-dialog #close-add-error{top:22px;right:22px}}
+
+/* Compact bilingual controls use the same hard-edge press feedback as Studio. */
+.header-actions { display: flex; align-items: center; gap: 12px; }
+.language-switch { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 0 3px 3px 0; }
+.language-switch > span { font-weight: 700; color: var(--ink); opacity: .55; }
+header .language-switch button {
+  min-width: 34px; min-height: 32px; padding: 3px 8px;
+  font-size: 13px; font-weight: 800; line-height: 1;
+  border: 1.5px solid var(--ink); background: var(--white); color: var(--ink);
+  box-shadow: 3px 3px 0 var(--ink); transform: translate(0, 0);
+  transition: transform 100ms ease-out, box-shadow 100ms ease-out, background-color 100ms ease-out;
+}
+header .language-switch button:not(:disabled):not([aria-pressed="true"]):hover {
+  background: #fff4ad; box-shadow: 1.5px 1.5px 0 var(--ink); transform: translate(1.5px, 1.5px);
+}
+header .language-switch button[aria-pressed="true"],
+header .language-switch button[aria-pressed="true"]:hover,
+header .language-switch button:not(:disabled):not([aria-pressed="true"]):active {
+  background: var(--yellow); box-shadow: inset 1px 1px 0 #14203444; transform: translate(3px, 3px);
+}
+header .language-switch button:focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; }
+header .language-switch button:disabled { cursor: wait; }
+html[lang="en"] .default-card-name { overflow: hidden; text-overflow: ellipsis; }
+html[lang="en"] .default-target strong { font-size: clamp(12px, 1.1vw, 18px); }
+html[lang="en"] .tabs button { white-space: normal; }
+@media (max-width: 600px) {
+  header { height: auto; min-height: 56px; flex-wrap: wrap; gap: 8px; }
+  header .header-actions { width: 100%; justify-content: flex-end; }
+  html[lang="en"] .default-target strong { padding-inline-end: 12px; }
+  html[lang="en"] .project-panel .assignment-section .default-target { height: 80px; }
+}
+@media (prefers-reduced-motion: reduce) { header .language-switch button { transition: none; } }

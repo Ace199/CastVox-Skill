@@ -1,3 +1,4 @@
+import { initialLocale, translatePageChrome, mountLocaleControl } from './locale-control.js';
 import { session } from './session.js';
 import { createPersistentApi } from './persistent-api.js';
 import { createStore } from './store.js';
@@ -10,6 +11,8 @@ import { fetchProviders } from './providers.js';
 import { freshDraft } from './store.js';
 import { createPreviewPlayer } from './preview-player.js';
 
+const locale = initialLocale(session.ui_language);
+translatePageChrome();
 const store = createStore();
 let providers = [], configError = '';
 try { providers = await fetchProviders(); } catch (error) { configError = error.message; }
@@ -18,8 +21,16 @@ providers = api.getProviders();
 const draft = freshDraft(providers[0]?.id ?? 'minimax', providers[0]?.default_model ?? '');
 store.update({ providers, draft });
 const controller = createController(store, api, eventLog), player = createPreviewPlayer(store, eventLog, undefined, api.previewBlob);
-mountStudio(document.querySelector('#workspace'), store, controller, eventLog, player);
-if (session.mode === 'mock' && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname) && new URLSearchParams(location.search).get('dev') !== '0') mountDebug(document.querySelector('#debug-panel'), document.querySelector('#debug-toggle'), store, api, controller, eventLog);
+let disposeStudio = () => {}, disposeDebug = () => {};
+const redraw = () => {
+  disposeStudio(); disposeDebug();
+  disposeStudio = mountStudio(document.querySelector('#workspace'), store, controller, eventLog, player);
+  if (session.mode === 'mock' && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname) && new URLSearchParams(location.search).get('dev') !== '0') {
+    disposeDebug = mountDebug(document.querySelector('#debug-panel'), document.querySelector('#debug-toggle'), store, api, controller, eventLog);
+  }
+};
+redraw();
+mountLocaleControl(store, locale, session.ui_language, redraw);
 await controller.load();
 if (configError) store.update({ error: configError });
 

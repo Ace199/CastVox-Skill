@@ -50,6 +50,8 @@ Agent：展示剩余三句供审阅，按授权生成，再整理完整交付。
 
 你可以每批审阅，也可以先审阅并授权全部剩余内容，再让 Agent 自动逐批执行。实际执行每批最多五段。已有完整外部演绎单，或已经试听并明确要求直接生成时，也可以按指定范围继续。
 
+Voice Studio 支持中文和英文，默认跟随 Agent 当前回答的主语言；顶部“中 / 英”按钮可手动切换，未保存草稿会保留。修改默认声音后，点击“完成设置”会先展示确认，再保存默认并提交绑定；没有默认改动时直接提交。
+
 **点击网页“完成”只是保存声音绑定。** 音色试听、演绎单确认和付费授权各有明确阶段，Agent 不会把选声完成当成整稿生成许可。
 
 ## 交付后，还能继续修改
@@ -121,7 +123,7 @@ python -m makesound.media
 
 ```powershell
 python -m unittest discover -s tests -t . -q
-node --test web/tests/v16.test.js tests/doubao-control.test.cjs
+node --test web/tests/v16.test.js web/tests/i18n.test.js web/tests/delete-hover.test.js tests/doubao-control.test.cjs
 python web/tests/test_config_editor.py
 python web/tests/test_provider_config.py
 ```

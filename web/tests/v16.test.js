@@ -215,3 +215,67 @@ test('WorkBuddy managed task handoff does not claim a desktop message was delive
   assert.match(store.getState().message, /WorkBuddy 后台任务/);
   assert.doesNotMatch(store.getState().message, /已向原聊天发送|已确认.*投递/);
 });
+
+test('completion confirms changed defaults then saves before submitting latest revision', async () => {
+  const { store, api, controller } = await setup(); const calls = [];
+  const save = api.saveDefaults;
+  api.saveDefaults = async payload => { calls.push('save'); return save(payload); };
+  api.submitAnswer = async answer => { calls.push('submit'); assert.equal(answer.defaults.general, 'pv_001'); assert.equal(answer.expected_revision, store.getState().data.revision); return { session_complete: true }; };
+  store.editDefault('general', 'pv_001');
+  await controller.submit();
+  assert.equal(store.getState().confirmation?.kind, 'defaults'); assert.deepEqual(calls, []);
+  await controller.confirmDefaults();
+  assert.deepEqual(calls, ['save', 'submit']); assert.equal(store.getState().receipt.session_complete, true);
+});
+
+test('canceling completion retains defaults draft without saving or submitting', async () => {
+  const { store, api, controller } = await setup(); let calls = 0;
+  api.saveDefaults = api.submitAnswer = async () => { calls++; };
+  store.editDefault('general', 'pv_001'); await controller.submit();
+  store.update({ confirmation: null });
+  assert.equal(calls, 0); assert.equal(store.getState().defaultsDraft.general, 'pv_001'); assert.equal(store.getState().data.defaults.general, null);
+});
+
+test('failed default save blocks submission and retains draft', async () => {
+  const { store, api, controller } = await setup(); let submissions = 0;
+  api.saveDefaults = async () => { throw new Error('save failed'); };
+  api.submitAnswer = async () => { submissions++; };
+  store.editDefault('general', 'pv_001'); await controller.submit(); await controller.confirmDefaults();
+  assert.equal(submissions, 0); assert.equal(store.getState().error, 'save failed'); assert.equal(store.getState().defaultsDraft.general, 'pv_001');
+});
+
+test('saved defaults survive notification failure and retry does not save again', async () => {
+  const { store, api, controller } = await setup(); let saves = 0, submissions = 0; const save = api.saveDefaults;
+  api.saveDefaults = async payload => { saves++; return save(payload); };
+  api.submitAnswer = async () => { if (++submissions === 1) throw new Error('submit failed'); return { session_complete: true }; };
+  store.editDefault('general', 'pv_001'); await controller.submit(); await controller.confirmDefaults();
+  assert.equal(store.getState().data.defaults.general, 'pv_001'); await controller.submit();
+  assert.equal(saves, 1); assert.equal(submissions, 2);
+});
+
+test('unchanged defaults submit directly without saving or confirming', async () => {
+  const { store, api, controller } = await setup(); let submissions = 0;
+  for (const role of store.getState().roles) { store.selectRole(role.id); store.assign('pv_001'); }
+  api.saveDefaults = async () => { assert.fail('must not save'); };
+  api.submitAnswer = async () => { submissions++; return { session_complete: true }; };
+  store.editDefault('general', 'pv_001'); store.editDefault('general', null);
+  await controller.submit(); assert.equal(submissions, 1); assert.equal(store.getState().confirmation, null);
+});
+
+test('clearing saved default requires confirmation and submits null', async () => {
+  const { store, api, controller } = await setup(); await saveDefaults(store, controller, { general: 'pv_001' });
+  for (const role of store.getState().roles) { store.selectRole(role.id); store.assign('pv_001'); }
+  api.submitAnswer = async answer => { assert.equal(answer.defaults.general, null); return { session_complete: true }; };
+  store.editDefault('general', null); await controller.submit(); assert.equal(store.getState().confirmation.kind, 'defaults');
+  await controller.confirmDefaults(); assert.equal(store.getState().receipt.session_complete, true);
+});
+
+test('management completion saves defaults without submitting an answer', async () => {
+  const { store, api, controller } = await setup(); api.mode = 'persistent'; let completed = 0;
+  store.update({ data: { ...store.getState().data, question: null } });
+  const save = api.saveDefaults; api.saveDefaults = async payload => ({ ...await save(payload), question: null });
+  api.complete = async () => { completed++; assert.equal(store.getState().data.defaults.general, 'pv_001'); return { session_complete: true }; };
+  api.submitAnswer = async () => { assert.fail('no question'); };
+  store.editDefault('general', 'pv_001'); await controller.submit(); await controller.confirmDefaults();
+  assert.equal(completed, 1); assert.equal(store.getState().submitting, false);
+});
