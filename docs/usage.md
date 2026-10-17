@@ -15,7 +15,17 @@ Claude Code 使用 `~/.claude/skills`，WorkBuddy 使用 `~/.workbuddy/skills`�
 
 已有同名目录时先检查内容并备份，不覆盖或删除。创建链接后新建对话，确认宿主实际读到 SKILL.md。宿主导入或升级可能将链接改成副本；可用 `Get-Item <skill-path> | Select-Object LinkType,Target` 复核。macOS/Linux 使用对应宿主目录及符号链接，宿主恢复的实机覆盖范围仍以参考文档为准。
 
+修改仓库后，核对宿主路径仍为链接、目标正确，且该路径与仓库 SKILL.md 的文件哈希一致；仅通过仓库测试不能证明宿主已经加载新版。需备份的旧副本放在宿主 skill 扫描目录外，避免被重复发现。替换链接不会更新对话中已经加载的旧指令，使用宿主支持的重新加载或新建对话后再验收三个入口。
+
 Agent 应从 skill 的真实链接目标定位仓库，所有 `python -m makesound...` 命令以仓库为工作目录，`--project` 始终传用户当前项目的绝对路径。不要把仓库测试项目、测试声音或默认值复制进用户项目。
+
+为支持宿主将链接重新导入为普通副本，在首次安装或迁移运行时后，从仓库根目录执行一次，保存本机安装记录（不是厂商配置，不含密钥，也不提交到仓库）：
+
+```powershell
+python -X utf8 -c "import json; from pathlib import Path; root=Path.cwd().resolve(); assert (root/'makesound/__init__.py').is_file() and (root/'skills/soundmaker-dubbing/SKILL.md').is_file(); record=Path.home()/'.config/soundmaker/runtime.json'; record.parent.mkdir(parents=True,exist_ok=True); record.write_text(json.dumps({'runtime_root':str(root)},ensure_ascii=False),encoding='utf-8')"
+```
+
+Agent 需要项目运行时且尚未记住位置时，只运行已加载 skill 目录下的 `scripts/runtime_location.py`；目录链接优先，安装记录为副本回退。两者失效则修复安装，不扫描用户目录。安装后应从宿主实际 skill 路径运行该入口，核对返回的仓库位置；内置音频入口不需要这个步骤。
 
 ## 配置和音频工具
 
@@ -31,13 +41,17 @@ python -m makesound.media
 
 ## 声音管理和绑定
 
+未绑定角色可选择“帮我选声音”：每角色推荐 1～3 个已核实音色，所有候选入项目库，按用户选择生成单个、部分或全部候选的同句试听。确认最终声音后在聊天保存绑定，无需网页。推荐和入库不生成音频；试听生成仍须确认具体内容及费用范围。生成成功的完整试听保留在声音库。
+
+已有固定音色或工作流时选择“使用我的声音”，直接复用明确配置；只在需要管理或自行配置时打开网页。调用契约见 [聊天选声](../skills/soundmaker-dubbing/references/voice-selection.md)。MiniMax 查询接口提供目录，角色匹配推荐由 Agent 判断。
+
 只管理当前项目声音时，可启动持久化 Studio：
 
 ```powershell
-python studio_v16_server.py --project '<existing-absolute-project-path>'
+python -m makesound.studio_session --project '<existing-absolute-project-path>' --ui-language zh-CN
 ```
 
-读取实际启动输出的本机 URL，不假设端口。离线开发时显式加 `--fake --config-dir web/tests/fixtures/providers`，该目录只有测试配置。
+读取实际启动输出的本机 URL，不假设端口。此入口不创建假任务，不发绑定完成通知。离线开发需要 Fake 时使用底层 `studio_v16_server.py --fake --config-dir web/tests/fixtures/providers`，该目录只有测试配置。
 
 配音任务的绑定页由 Agent 创建 Question 后执行：
 
@@ -45,7 +59,9 @@ python studio_v16_server.py --project '<existing-absolute-project-path>'
 python -m makesound.studio_session --project <absolute-project-path> --question <question-id>
 ```
 
-用户只需在页面选择声音、速度和声调，再点击完成。Agent 从保存的 Answer 恢复，按主 skill 准备每角色一句的试听单。宿主恢复失败时可在原聊天说“完成了”；完整 Answer 不会因通知失败丢失。WorkBuddy 的后台任务与等待要求必须另读对应宿主参考。
+对话已有角色和任务时，重新打开网页默认使用带 Question 的入口，展示角色和已有绑定。已提交的任务会自动准备预填的新绑定版本，返回实际新 Question ID；从旧 ID 重开也会沿用最新已保存选择。打开草稿不改变生效绑定，不生成音频，也不授权付费；旧 Answer、Job 和音频保留。保存后用 `python -m makesound.binding_revision status --project <project> --question <new-question-id>` 查询受影响角色与句子，只审阅和生成需要变化的部分。
+
+用户只需在页面选择声音、速度和声调，再点击完成。Agent 从保存的 Answer 恢复，检查已有试听，不重复生成相同内容。宿主恢复失败时可在原聊天说“完成了”；完整 Answer 不会因通知失败丢失。仅到网页步骤读取当前宿主说明；WorkBuddy 按受管理后台任务要求启动和等待。
 
 默认声音、默认男声、默认女声均可留空。选择或清空默认只改草稿，页面不设独立保存/取消按钮；点击“完成设置”时，有变化才弹出确认。取消或 Esc 保留草稿；确认后先保存默认，再提交当前绑定。保存失败时不提交，提交失败时保留已经保存的默认，修复后可重试。
 
@@ -80,7 +96,8 @@ python -m makesound.production run --project <absolute-project-path> --job <froz
 ## 数据目录
 
 - `配音/<任务名称>/<版本>/`：用户可读交付，保留完整分句、字幕与合并试听。
-- `outputs/audio/<job_id>/`：运行时源导出，不直接替代用户交付入口。
+- `.makesound/exports/audio/<job_id>/`：运行时源导出。旧 `outputs/audio` 保留兼容，不再新建。
+- `.makesound/workspace/<task-key>/inputs/`：任务输入与分批 JSON，不能散落项目根目录。
 - `.makesound/`：绑定问答、计划、冻结快照、缓存、预算与通知回执。
 
 这些是项目本机数据，不上传公共仓库。目录链接只同步 skill 源文件，不同步不同项目的声音绑定或任务状态。

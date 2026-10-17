@@ -184,8 +184,9 @@ class ProjectCore:
         path = self.root / relative
         reject_links(path)
         require(not Path(relative).is_absolute() and path.resolve().is_relative_to(self.root)
-                and Path(relative).parts[:2] == ('outputs', 'audio'),
-                "unsafe_path", "Output path must stay under project outputs/audio.")
+                and (Path(relative).parts[:2] == ('outputs', 'audio')
+                     or Path(relative).parts[:3] == ('.makesound', 'exports', 'audio')),
+                "unsafe_path", "Output path must stay under internal exports or legacy outputs/audio.")
         return path
 
     def preview_state(self, vid):

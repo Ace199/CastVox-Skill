@@ -1,9 +1,15 @@
-# 绑定完成后的原聊天恢复
+# 网页绑定恢复索引（到网页步骤才读取）
 
-启动网页前识别 Harness。Codex 当前实现见 [Codex](harnesses/codex.md)。Claude 接入与验收见 [Claude](harnesses/claude.md)，腾讯 WorkBuddy 见 [WorkBuddy](harnesses/workbuddy.md)，豆包 Windows 2.32.5 的临时本机桥接见 [豆包](harnesses/doubao.md)。Claude 原生适配器已通过本地管道、HTTP 及 Windows 原会话自动绑定→网页完成→回复实测；WorkBuddy 桌面端仍待验收。不能因同品牌或支持 MCP 就推断它们能唤醒原聊天。
+仅选项 1/2 准备打开绑定/管理网页，或正在处理该网页恢复问题且需要共用说明时，才使用本索引。Studio 已提供宿主入口，不要求额外读取本索引；已读当前宿主说明不重复读取。选项 3 内置生成不触发此索引。按已知当前宿主只选下面的一份，不逐一打开；未知宿主只补问身份，不扫描源码或凭据来识别。
 
-Kimi Work 3.2.8 已通过自动登记、网页绑定完成和原会话继续执行测试，详见 [Kimi](harnesses/kimi.md)。其他模式与版本仍须验证。
+| 当前宿主 | 对应说明 |
+|---|---|
+| Claude Code | [Claude](harnesses/claude.md) |
+| Codex | [Codex](harnesses/codex.md) |
+| WorkBuddy | [WorkBuddy](harnesses/workbuddy.md) |
+| Kimi Work | [Kimi](harnesses/kimi.md) |
+| 豆包 | [豆包](harnesses/doubao.md) |
 
-统一规则：先持久化 Answer，再通知发起绑定的原会话。通知仅表示绑定完成，不表示演绎单已确认或允许付费合成。Agent 收到事件后核对项目、Question、Answer，读取已保存结果，按厂商文档生成待审阅演绎单；已处理的 Answer 不重复执行。
+各宿主的启动、等待、通知状态和兼容性证据仅在对应文档维护，不从品牌、目录链接或 MCP 连接推断恢复能力。
 
-Codex 确认入队才显示已发送；入队不等于 Agent 已运行。Claude 原生管道写入使用 sent_unconfirmed，页面明确尚未确认接收或回复。WorkBuddy 改用受管理任务续跑：打开网页后须在同一轮等待 TaskOutput；awaiting_task 表示保存后交给任务返回，不能写成已向桌面聊天发消息。旧 delivered 仅证明引擎执行，真实测试中桌面丢弃了这些输出。通知失败或结果不明时保留 Answer，提示用户回原聊天发送“完成了”。网页随后可以关闭。未知发送结果不得自动重发。无 Harness 支持时仍可完成绑定，不阻断保存。
+共用规则：先持久化 Answer，再尝试通知发起网页的原会话。通知只表示绑定保存，不代表演绎单确认或付费授权。当前任务有角色时携带 Question；启动器返回 revision 新 ID 时，事件与后续 Answer 读取以实际 ID 为准，原启动命令保留供会话归属核对。收到事件后按已读 Studio 的配方 C 核对并读取真实结果，检查已有试听，revision 比较变更，仅处理未完成或受影响内容，不强制重做试听。未知发送结果不盲目重试；失败时保留 Answer，提示回原聊天说“完成了”。管理模式没有待回答 Question 时只保存管理结果，不伪造恢复事件。

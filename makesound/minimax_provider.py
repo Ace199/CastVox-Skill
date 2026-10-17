@@ -56,6 +56,10 @@ def download_subtitles(url, text, speech_seconds, *, transport, hosts=None, inli
     subtitle_source(url, hosts=hosts)
     try:
         document = transport.request(url, maximum=4 * 1024 * 1024)
+    except MakeSoundError as exc:
+        if exc.code in {'unsafe_url', 'subtitle_dns_not_public', 'subtitle_host_blocked', 'subtitle_download_failed'}:
+            raise
+        raise MakeSoundError('subtitle_download_failed', 'Subtitle download failed; retry download without synthesis.') from None
     except Exception:
         raise MakeSoundError('subtitle_download_failed', 'Subtitle download failed; retry download without synthesis.') from None
     try:
@@ -78,7 +82,8 @@ class HTTPSMiniMaxTransport:
             try:
                 addresses = socket.getaddrinfo(parsed.hostname, 443, type=socket.SOCK_STREAM)
                 require(bool(addresses) and all(ipaddress.ip_address(row[4][0]).is_global for row in addresses),
-                        'unsafe_url', 'Subtitle downloads require public network addresses.')
+                        'subtitle_dns_not_public',
+                        'Subtitle DNS resolved to a non-public address; check DNS or proxy settings before retrying.')
                 pinned = addresses[0][4][0]
             except OSError:
                 raise MakeSoundError('subtitle_download_failed', 'Subtitle host could not be resolved.') from None
@@ -254,7 +259,7 @@ class MiniMaxProvider:
                 except Exception as exc:
                     receipt['subtitle_error'] = (exc.code if isinstance(exc, MakeSoundError) and exc.code in {
                         'subtitle_url_missing', 'unsafe_url', 'subtitle_host_blocked',
-                        'subtitle_download_failed', 'subtitle_timing_invalid'} else 'subtitle_download_failed')
+                        'subtitle_dns_not_public', 'subtitle_download_failed', 'subtitle_timing_invalid'} else 'subtitle_download_failed')
                 atomic_write(receipt_path, receipt)
             except MakeSoundError:
                 raise

@@ -73,7 +73,8 @@ class Handler(StaticHandler):
                 return
             payload = ('export const session = Object.freeze(' + json.dumps({
                 'mode': 'persistent', 'token': self.server.session_token, 'csrf': self.server.csrf_token,
-                'question_id': self.server.question_id, 'ui_language': self.server.ui_language}) + ');').encode('utf-8')
+                'question_id': self.server.question_id, 'ui_language': self.server.ui_language,
+                'project_id': self.server.backend.core.read()['project_id']}) + ');').encode('utf-8')
             self.send_response(200)
             self.send_header('Content-Type', 'text/javascript; charset=utf-8')
             self.send_header('Content-Length', str(len(payload)))

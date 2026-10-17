@@ -64,7 +64,11 @@ class Questions:
             atomic_write(path, obj)
             return {'saved': True}
 
-    def submit(self, qid, assignments, *, revision=None):
+    def submit(self, qid, assignments, *, revision=None, replace_assignments=False):
+        # Explicit chat choices may replace an earlier Studio draft, but callers
+        # must supply a reviewed project revision. Ordinary Studio keeps snapshots.
+        require(type(replace_assignments) is bool)
+        require(not replace_assignments or revision is not None, 'revision_required', 'Explicit choices require a reviewed revision.')
         path = self._path(qid)
         with file_lock(path.with_suffix(".lock")):
             obj = self.read(qid)
@@ -76,7 +80,8 @@ class Questions:
                 require(type(revision) is int and revision == preset['revision'], 'revision_conflict', 'Reload the project.')
             resolved = {}
             for role, vid in assignments.items():
-                binding = obj.get('assignments', {}).get(role)
+                require(not replace_assignments or vid is not None, 'voice_unavailable', 'Explicit chat choices cannot silently use a default.')
+                binding = None if replace_assignments else obj.get('assignments', {}).get(role)
                 if isinstance(vid, dict):
                     v.shape(vid, {'default_slot'}, {'default_slot'})
                     slot = vid['default_slot']
@@ -88,6 +93,13 @@ class Questions:
                     resolved[role] = copy.deepcopy(binding['resolved'])
                 else:
                     resolved[role] = self.core.resolve(explicit=vid, preset=preset)
+            if replace_assignments:
+                obj['assignments'] = {role: {'project_voice_id': value['project_voice_id'],
+                    'resolved': copy.deepcopy(value),
+                    'snapshot': {'project_voice_id': value['project_voice_id'], 'name': value['name'],
+                                 'category': preset['voices'].get(value['project_voice_id'], {}).get('category', 'other'),
+                                 'source': copy.deepcopy(value['source']), 'settings': copy.deepcopy(value['effective_settings'])}}
+                    for role, value in resolved.items()}
             obj["answer"] = {"answer_id": uid("a_"), "question_id": qid, "job_id": obj["job_id"],
                              "project_id": preset["project_id"], "assignments": dict(assignments), "resolved": resolved}
             v.no_secrets(obj)

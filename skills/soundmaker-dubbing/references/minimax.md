@@ -1,6 +1,31 @@
 # MiniMax 配音执行规范
 
+仅用于选项 1/2 已选定 MiniMax 的配置、目录核实、参数审阅或生成；选项 3 不读取本文件。不连带读取其他厂商或宿主恢复文档，已读且未变的能力说明不重复加载。
+
 核对日期：2026-10-16。当前 SoundMaker 使用国内 HTTP `/v1/t2a_v2`，不是 MCP 工具包装层。
+
+## 本机配置与访问入口
+
+仅在本次已确定使用 MiniMax，且需要配置、核实目录、推荐或生成时读取本文件；未选厂商时不预读。此文件维护 MiniMax 的配置和访问方法；不同时加载其他厂商文档。
+
+用户选择配置 MiniMax 后调用 `configure('minimax')`。缺文件会创建安全模板并自动打开本机编辑器，已有文件仅打开；返回 config_path 可交给用户定位。无需打开网站或让用户手动创建 JSON：
+
+```text
+python -X utf8 -c "import json; from makesound.voice_selection_entry import configure; print(json.dumps(configure('minimax'),ensure_ascii=False))"
+```
+
+若编辑器未能启动，按返回路径帮助用户打开，不声称已经打开。等待保存后重新执行 choices，摘要始终标记 authentication 为 not_verified。默认 supported_providers 只含 MiniMax，Agent 不得传入火山引擎来冒充已接入。
+
+### 查询音色与推荐
+
+MiniMax `get_voice` 按类型列出音色，不按性格推荐。Agent 使用官方目录或当前账号结果核实名称、ID 和描述，再给出自己的匹配理由。公开目录可核实信息，但不能证明当前账号有权限；没有实时调用就标注未验证账号可用性。官方目录与接口链接只在实际需要核实时打开，不在开始任务时批量抓取。
+
+推荐请求明确男声/女声时，可沿用请求填 category=male/female，在理由中标注“分类依据：请求要求”；目录缺少 gender 字段不必退回 other。官方名称/描述明确时也可据此分类，只有请求与目录都不明确或特殊音色才用 other。不从角色名字猜性别，不把请求分类称作厂商已核实；信息或试听冲突时核对/换推荐。已有官方目录内容未变时复用，不每轮重新下载。
+
+- [音色查询接口](https://platform.minimax.io/docs/api-reference/voice-management-get)
+- [官方音色目录](https://github.com/MiniMax-AI/skills/blob/main/skills/frontend-dev/references/minimax-voice-catalog.md)
+
+当前没有记录可供 Agent 单独运行的账号音色查询命令，不能编造 CLI、直接拼接带密钥的请求或为查询去读源码。可使用官方目录；确需实时账号查询时说明具体接口缺口。实际合成走下面已记录的 production 入口，不绕过运行时授权和参数校验。
 
 ## 官方依据
 - [国内 HTTP 参数](https://platform.minimax.cn/docs/api-reference/speech-t2a-http)
@@ -24,7 +49,7 @@ HTTP 情绪枚举实际有 9 项（正文“8 种”是计数不一致）。MCP 
 未明确需要情绪时省略字段，让模型根据文本决定；不要发送 auto、neutral 或自由中文值。当前 speech-2.8-hd 仅开放上表前七项。扩展项若将来文档改变，先更新验证与测试。
 
 ## 从演绎单到请求
-先遵守主 Skill 的首轮角色试听阶段。准备调用前，从运行时仓库执行 `python -m makesound.media` 检查现有媒体工具；PATH 受限时运行时也会查当前用户已安装的 WinGet Gyan FFmpeg。输出 `wav_only` 不阻止合成和交付匹配的单声道 16-bit / 32 kHz PCM WAV。不得自动下载或安装 FFmpeg。MP3/重采样缺少工具时先说明限制，在冻结前选择 WAV；不静默改动已确认的任务格式。
+先遵守当前项目试听状态，不重复已完成并认可的片段。媒体能力沿用本任务已有检查结果；确无结果或环境/格式要求变化时，才按 [通用接口的媒体检查](workflow-api.md#生成前检查与冻结导出入口) 执行一次。`wav_only` 不阻止匹配的 PCM WAV 交付；缺少 MP3/重采样能力时冻结前解决，不自动安装工具，不静默修改已确认格式。
 
 真实执行使用共享入口（占位值由已确认任务提供，不是新授权）：
 ```text
@@ -32,10 +57,10 @@ python -m makesound.production run --project <absolute-project-path> --job <froz
 ```
 该入口负责创建 MiniMaxProvider 并传入 Generation。裸 `Generation(core).run(job_id)` 默认没有真实适配器，不可用作 MiniMax 生成入口。不要把 provider_not_implemented 误诊为模型、音色或厂商服务故障。
 
-1. 读取用户已绑定的 project voice、voice_id、model、speed、pitch，不自行替换声音。
+1. 已绑定生成读取用户确认的绑定快照；推荐候选试听读取已审阅并冻结的候选项目声音。两者都使用对应 project voice、voice_id、model、speed、pitch，不自行替换声音。候选已入项目库不表示角色已最终绑定，不要求先提交最终 Answer 才执行候选试听。
 2. 每句选择零或一个受支持情绪。中文细节放 emotion/delivery_notes，机器值放 provider_directives，例如 `{ "emotion": "angry" }`。愤怒并不保证精确的“压抑”；此类细节只作为表演建议。
 3. 给用户审阅原文、声音、语速、声调、情绪参数、语气词和停顿。原文、声音或情绪改变后重新确认；用户对明确展示版本的自然语言确认有效，无需手抄哈希。程序记录对应哈希。
-4. 通过 makesound.performance_plan.propose/confirm 持久化，production.plan 冻结任务。emotion 经 execution_segments、冻结 chunk 传递到 voice_setting.emotion。缓存与请求收据必须包含情绪，避免复用其他情绪音频。
+4. 已绑定演绎单通过 makesound.performance_plan.propose/confirm 持久化、production.plan 冻结；最终绑定前的候选试听按 voice-selection 的 audition/freeze_audition 入口冻结，不要求先有 Answer。emotion 经 execution_segments、冻结 chunk 传递到 voice_setting.emotion。缓存与请求收据必须包含情绪，避免复用其他情绪音频。
 5. 用户明确要求调用本次 API 后，设置本次任务调用数和字符上限；不重复索取已有授权。未知计费不自动重试。
 6. 请求示意：
 ```json
@@ -60,7 +85,23 @@ python -m makesound.production run --project <absolute-project-path> --job <froz
 - speed 0.5–2；pitch 整数 -12–12。实际听感需试听验收。
 
 ## 返回与恢复
-运行时输出音频和 SRT 至 `<project>/outputs/audio/<job_id>`；用户交付需再按 [文件与交付规范](delivery-layout.md) 本地整理到 `配音/<任务名称>/<版本>/`，不能仅链接内部 Job 目录。字幕由真实返回时标转换，不能伪造。保留收到的原始音频；字幕或导出失败只修复本地结果，不重复付费合成。当前调用失败或超时进入 billing_unknown 时先核对厂商结果。
+运行时输出音频和 SRT 至 `<project>/.makesound/exports/audio/<job_id>`；用户交付需再按 [文件与交付规范](delivery-layout.md) 本地整理到 `配音/<任务名称>/<版本>/`，不能仅链接内部 Job 目录。字幕由真实返回时标转换，不能伪造。保留收到的原始音频；字幕或导出失败只修复本地结果，不重复付费合成。当前调用失败或超时进入 billing_unknown 时先核对厂商结果。
+
+本路径的字幕来自 TTS 请求的 `subtitle_enable=true`、`subtitle_type=sentence`：非流式响应返回 `subtitle_file` 下载地址，下载得到带 `time_begin/time_end` 的字幕 JSON，再由本地导出为 SRT；不是调用一个独立的 SRT 生成接口。官方另有 [Speech to Text](https://platform.minimax.io/docs/api-reference/speech-to-text) 支持 `response_format=srt`，那是上传音频做识别的另一条服务，当前未接入，不能自动用它兜底或额外付费。TTS 字幕说明见 [同步语音接口](https://platform.minimax.io/docs/api-reference/speech-t2a-http)。
+
+`subtitle_dns_not_public` 表示下载器解析到非公网地址并拒绝连接；代理 Fake-IP DNS 可能产生此现象，不能据此断言厂商没生成字幕。保留音频和私有字幕回执，检查本机 DNS/代理对该 OSS 字幕域名的解析；不能关闭公网地址校验、关闭 TLS 验证、放行所有内网地址或把签名 URL 发到聊天。解析恢复后只重下既有字幕，不重新合成。老记录只保留 `subtitle_download_failed` 时，不能仅凭它推断同一原因；需要脱敏诊断验证。
+
+`run` 返回 `export_incomplete`（退出码 2）不等于音频合成失败：先看 chunks 的实际状态和 export_error。若仅 `subtitle_unavailable` 且音频成功，候选选声使用选声契约的 audition_results 直接交付，继续已有授权内其他独立 Job；不要用 `&&` 将后续 Job 是否执行绑定在字幕导出退出码上。每个 Job 执行后读取其状态，遇到计费未知/合成失败先处理相应范围，不盲目整批重跑。
+
+`--max-calls`、`--max-characters` 按**该 Job**冻结返回的 chunks、characters 填写，多个 Job 的合计才是本轮总范围，不能把全轮总额度重复传给每个 Job。已授权三份各三候选的任务，例如分别 3/93、3/72、3/48，总计 9/213；不逐个重新征求同一授权，也不自行增加字符余量。
+
+需要字幕时，音频与字幕故障按错误类型分流：音频已完整、仅缺字幕，不运行 repair-audio；字幕和输入未改变时重复 export 不会补出时标。已有原始字幕下载源时可按实际 chunk 执行一次只下载字幕的恢复：
+
+```text
+python -X utf8 -m makesound.production retry-subtitles --project "<project>" --job "<job-id>" --chunk "<chunk-id>"
+```
+
+必须传真实 chunk_id；同 Job 其他 chunk 仍缺字幕时，总导出可能继续不完整，不能据此重复修复已成功的 chunk。无源 `subtitle_source_unavailable` 或同一失败未得到新信息时停止，报告缺失，不继续轮换修复命令；不得打印签名下载 URL。外部已取得且已核对的时标可使用 `repair-subtitles --project "<project>" --job "<job-id>" --chunk "<chunk-id>" --subtitle-file "<reviewed-timing.json>"` 本地导入；无时标不编造，不为字幕再调用 TTS。
 
 ## 编写演绎单前的能力检查与逐段交付
 在编写演绎单之前读取本文件，先确认所选模型支持的情绪、停顿、发声标签及本地实现范围，再提出可执行计划。不得先写自由表演要求，再默默忽略不支持的控制。

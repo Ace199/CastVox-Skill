@@ -46,7 +46,18 @@ def _validate_input(items, source_segments):
     return supplied
 
 
-def propose(core, question_id, items):
+def select_segments(source_segments, sentence_ids):
+    """Select a bounded batch in manuscript order; never rewrite its source."""
+    require(isinstance(sentence_ids, list) and 0 < len(sentence_ids) <= 5
+            and all(isinstance(sid, str) for sid in sentence_ids),
+            'plan_coverage', 'Select one to five original sentence IDs.')
+    require(len(set(sentence_ids)) == len(sentence_ids), 'plan_coverage', 'Sentence IDs must be unique.')
+    selected = [segment for segment in source_segments if segment['sentence_id'] in sentence_ids]
+    require(len(selected) == len(sentence_ids), 'plan_coverage', 'Every selected sentence must exist exactly once.')
+    return selected
+
+
+def propose(core, question_id, items, *, sentence_ids=None):
     """Persist an external Agent's plan without claiming, freezing, or synthesizing."""
     v.identifier(question_id)
     question = Questions(core).read(question_id)
@@ -57,6 +68,9 @@ def propose(core, question_id, items):
             'session_mismatch', 'Trusted task handoff differs from the Studio Question.')
     source_segments = handoff.get('manifest', {}).get('segments')
     require(isinstance(source_segments, list) and source_segments, 'plan_coverage', 'Task manuscript is missing.')
+    manuscript_hash = digest(source_segments)
+    if sentence_ids is not None:
+        source_segments = select_segments(source_segments, sentence_ids)
     supplied = _validate_input(items, source_segments)
     preset = core.read()
     answer = question['answer']
@@ -88,7 +102,10 @@ def propose(core, question_id, items):
         })
     plan = {'schema_version': '1.8', 'plan_id': uid('plan_'), 'project_id': preset['project_id'],
             'question_id': question_id, 'job_id': question['job_id'], 'answer_id': answer['answer_id'],
-            'manuscript_hash': digest(source_segments), 'status': 'pending_confirmation', 'segments': segments}
+            'manuscript_hash': manuscript_hash, 'status': 'pending_confirmation', 'segments': segments}
+    if sentence_ids is not None:
+        plan.update(source_job_id=question['job_id'], job_id=uid('job_'),
+                    sentence_ids=[segment['sentence_id'] for segment in source_segments])
     plan['plan_hash'] = _hash(plan)
     v.no_secrets(plan)
     path = _path(core, plan['plan_id'])
@@ -115,7 +132,7 @@ def render(plan):
         unsupported = ('不支持', '未接入', '未核实', '不设置')
         def visible(value):
             return value and not any(marker in value for marker in unsupported)
-        lines.extend([f'{index}. {item["text"]}',
+        lines.extend([f'{index}. [{item["sentence_id"]}] {item["text"]}',
                       f'   角色：{item["role_id"]}；声音：{voice["name"]} ({voice["project_voice_id"]})'])
         from .providers import capabilities, MINIMAX_DOCUMENTED_MODELS
         caps = capabilities(voice['source'])

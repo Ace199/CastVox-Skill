@@ -19,7 +19,7 @@ def plan(core, *, request_path=None, question_id=None, performance_plan=None, co
             'invalid_data', 'Choose exactly one sentence array, Studio Question, or confirmed performance plan.')
     engine = Generation(core, output_format=audio_format)
     if performance_plan:
-        from .performance_plan import execution_segments, read as read_performance_plan
+        from .performance_plan import execution_segments, read as read_performance_plan, select_segments
         v.identifier(performance_plan)
         require(audio_format is None, 'invalid_data', 'Output format is selected before performance-plan confirmation.')
         reviewed = read_performance_plan(core, performance_plan)
@@ -31,7 +31,8 @@ def plan(core, *, request_path=None, question_id=None, performance_plan=None, co
             handoff = read_json(handoff_path)
             questions = Questions(core)
             question = questions.read(question_id)
-            require(reviewed['project_id'] == core.read()['project_id'] and reviewed['job_id'] == question['job_id']
+            require(reviewed['project_id'] == core.read()['project_id']
+                    and reviewed.get('source_job_id', reviewed['job_id']) == question['job_id']
                     and reviewed['answer_id'] == question.get('answer', {}).get('answer_id'),
                     'plan_mismatch', 'Performance plan does not belong to the current Studio Answer.')
             require(handoff['question_id'] == question_id and handoff['harness_session_id'] == question['harness_session_id'],
@@ -39,6 +40,10 @@ def plan(core, *, request_path=None, question_id=None, performance_plan=None, co
             source_segments = handoff.get('manifest', {}).get('segments')
             require(reviewed['manuscript_hash'] == digest(source_segments), 'plan_changed',
                     'The manuscript changed after the performance plan was reviewed.')
+            if 'sentence_ids' in reviewed:
+                require('source_job_id' in reviewed and reviewed['job_id'] != question['job_id'],
+                        'plan_mismatch', 'A batch must have its own Job identity.')
+                source_segments = select_segments(source_segments, reviewed['sentence_ids'])
             segments = execution_segments(reviewed)
             require([(item['paragraph_id'], item['sentence_id'], item['role_id'], item['text']) for item in segments]
                     == [(item['paragraph_id'], item['sentence_id'], item['role_id'], item['text']) for item in source_segments],
@@ -48,10 +53,12 @@ def plan(core, *, request_path=None, question_id=None, performance_plan=None, co
                 questions.claim(question_id, handoff['harness_session_id'])
             require(question['claimed_by'] in {None, handoff['harness_session_id']}, 'session_mismatch',
                     'Answer was claimed by another Harness session.')
-            snapshot_path = core.managed_path(f'.makesound/jobs/{question["job_id"]}/snapshot.json')
-            snapshot = (engine.load(question['job_id']) if snapshot_path.exists() else
+            snapshot_path = core.managed_path(f'.makesound/jobs/{reviewed["job_id"]}/snapshot.json')
+            snapshot = (engine.load(reviewed['job_id']) if snapshot_path.exists() else
                         engine.freeze_from_answer(question_id, handoff['harness_session_id'], segments,
-                                                  confirmed=True, authorized=True))
+                                                  confirmed=True, authorized=True, job_id=reviewed['job_id']))
+            require(snapshot['segments'] == segments, 'snapshot_conflict',
+                    'An existing frozen Job differs from the confirmed performance plan.')
     elif question_id:
         require(confirmed is True, 'authorization_required', 'Confirm the manuscript before creating a production plan.')
         v.identifier(question_id)

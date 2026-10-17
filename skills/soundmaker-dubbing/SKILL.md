@@ -5,141 +5,94 @@ description: Plan and produce dubbing for a supplied script with SoundMaker. Use
 
 # SoundMaker Dubbing
 
-Use this Skill when the user asks to generate dubbing or revise an existing dubbing task. For a targeted revision, go directly to references/revision-and-recovery.md instead of restarting role analysis. Do not use it for ordinary writing, discussing characters, or managing a voice library without a dubbing request.
+用于生成或修订配音；普通写作、讨论角色或单独管理声音库不启动整套配音流程。修订先沿用原结果的生成路径：选项 1/2 才读 [项目修订与恢复](references/revision-and-recovery.md)；选项 3 留在当前应用的内置音频说明，不启动项目流程。
 
-## Runtime and target project
+## 操作边界与按需读取
 
-This skill is linked into supported local agent hosts from the SoundMaker repository. Resolve the skill directory link before locating the runtime: the repository root is two directories above this skill folder (`skills/soundmaker-dubbing`). Use that resolved repository as the runtime working directory; do not assume a personal checkout path. If the host imported a copy instead of a link, locate the actual runtime repository before executing commands.
+把运行时当作已安装工具：日常配音不读源码、测试、Git 历史，不扫描仓库、枚举接口或重复安装环境。**普通配音遇到错误也不自动转为源码排查**；按 reference、必要时当前入口的帮助、脱敏错误和产物诊断，仍不能解决就报告接口缺口并保留结果。明确的开发请求才进入代码任务。
 
-Run `python -m makesound...` with the SoundMaker repository as the command working directory, while passing `--project` as the user's CURRENT project absolute path. For Python API calls, instantiate ProjectCore with that same target project. Never substitute the runtime repository for a newly opened user project. Outputs, defaults, voices and task records belong to the target project; do not copy this repository's test voices, defaults or previous jobs into it. A new project may need voice binding/configuration. Reuse the user's provider configuration without exposing credentials. The user should not need to configure launch commands manually.
+**禁止预读**。已读且未变化的规则不重复读；链接是按需路由，不递归加载整条引用链。主 Skill 决定当前路径，reference 只补当前步骤的接口或能力说明：
 
-## 运行优先：正常配音不阅读源码
-
-把已安装的 SoundMaker 运行时当作可直接调用的工具使用。完成上面的运行时定位后，复用当前可用的 Python 环境，在该运行时目录执行命令；本轮记住位置与解释器，不为每个步骤重复扫描仓库。不要为了“了解实现”先读取 `makesound/*.py`、网页源码、测试或 Git 历史，也不要每次重新安装环境、下载依赖、运行完整测试或重写工具。
-
-**操作顺序：本 Skill 的流程规则 → 当前步骤所需的 reference 契约 → 直接执行已有命令/已记录 API → 检查返回状态与产物。** 仅在参数不明确时查看对应入口的 `--help`，不是每次任务都运行所有帮助。reference 中“检查本地实现”“使用某个 .py 模块”“查看函数契约”等表述，正常流程均指采用其中已记录的接口、能力矩阵和运行时验证结果，不要求打开源文件。
-
-| 当前操作 | 已有运行入口 |
+| 当前步骤 | 入口 |
 |---|---|
-| 媒体能力检查 | `python -m makesound.media` |
-| 打开本次绑定页 | `python -m makesound.studio_session --project <目标项目绝对路径> --question <本次Question> --ui-language <zh-CN或en>` |
-| 从已确认演绎单冻结 Job | `python -m makesound.production plan --project <目标项目绝对路径> --performance-plan <已确认计划ID>` |
-| 从已审阅并确认的外部请求冻结 Job | `python -m makesound.production plan --project <目标项目绝对路径> --request <已整理的请求JSON路径> --confirmed` |
-| 执行已授权的 Job | 使用 §5 的 `makesound.production run`，必须带本次真实授权及调用/字符上限 |
-| 重新导出已有音频 | `python -m makesound.production export --project <目标项目绝对路径> --job <已有Job>` |
-| 修复已收到音频的本地处理 | `python -m makesound.production repair-audio --project <目标项目绝对路径> --job <已有Job>` |
+| 选项 1/2 查询项目声音、创建/恢复 Question、提出或确认演绎单 | [通用接口与固定配方 A–E](references/workflow-api.md) |
+| 已选项目音色（选项 1/2）且需要选声/配置 | [项目选声入口](references/voice-selection.md)，需要厂商信息时才查安全摘要 |
+| 选择应用内置生成（选项 3） | Kimi 只读 [Kimi 内置音频](references/native-audio/kimi.md)；豆包只读 [豆包内置音频](references/native-audio/doubao.md)，不读另一应用 |
+| 已确定使用 MiniMax，需要配置、目录核实、核对演绎参数或生成 | 仅 [MiniMax](references/minimax.md)；不读未选厂商 |
+| 只有实际需要打开绑定/管理网页时 | [Studio](references/studio.md)，只读取当前宿主的一份说明 |
+| 已绑定声音准备、确认、冻结演绎单（包括外部演绎单；不含候选试听） | [演绎单契约](references/performance-plan.md) |
+| 选项 1/2 交付 | [交付规范](references/delivery-layout.md) |
+| 选项 1/2 换声、改句、执行失败 | [修订与恢复](references/revision-and-recovery.md) |
 
-占位值必须替换为当前任务的真实值；表格不是应全部执行的步骤。`plan` 只冻结任务，不授权付费；不得为了让命令通过而自动补上 `--confirmed` 或 `--authorize-paid`。后者必须对应用户已确认的具体内容和付费范围。不要将不适用于当前状态的 export/repair 当作通用失败重试。
+聊天选声、绑定和生成不读宿主网页恢复说明。内置音频说明与网页恢复说明分开，仅选项 3 读取当前应用的内置音频说明。未选 MiniMax 不读其文档，火山未适配不读访问说明；Claude 到网页步骤只读 Claude，不能连带读取 Kimi 等。
 
-创建 Question、查询声音/绑定、提出与确认演绎单等尚无统一 CLI 的步骤，直接调用 reference 已记录的 Python API；允许编写最小调用脚本导入运行时并传入当前任务数据，不复制业务实现，不直接改写 `.makesound` 内部状态。缺少必要契约时，先查相关 reference 和对应命令帮助；仍缺失就明确记录接口缺口，不能猜造 CLI、函数、参数或成功结果。本规则不表示所有步骤已经有统一命令入口。
+项目音色路径才需要记住运行时目录、解释器、目标项目、question_id、selection_id、plan_id/hash、job_id、试听结果与授权范围；继续任务只补缺项，不重新 prepare、查询声音库或展示相同确认单。恢复缺上下文只读本任务原稿/handoff 和相关状态，不重走全流程。内置生成不为满足这些内部字段而创建假任务。
 
-**读取代码仅用于有具体证据的异常排查，或用户明确要求开发/审查代码。** 先记录脱敏错误码、失败步骤、退出码和必要输出，排查工作目录、解释器、参数、权限与环境问题；命令正常返回时不得继续读源码“确认一次”。若文档与运行时不符、契约确实缺失或异常无法由现有诊断解决，只读取与该问题直接相关的模块，修复/澄清后立即回到运行流程。普通配音任务不因此自动扩展成重构或新增接口开发。
+推进只依据当前阶段、已有结果和下一步缺项；不要每轮重列整套计划或重新讨论已确定路径。需要 Todo 时保留实际阶段，不添加已经完成的“绑定后再首轮试听”。字符/调用数与音频时长取接口结果，不手工逐字计数、不自行加预算余量；用户回复只展示本轮结果、必要差异和下一步，音频链接只列一次。
 
-读取用户原稿、Skill/reference、必要的项目业务数据和返回产物不属于源码阅读。始终依实际返回和文件验证报告结果：命令已启动不等于成功，通知已入队不等于 Agent 已处理，音频文件存在不等于内容/格式校验通过。保留原有试听、审阅、付费授权、原会话归属及凭据保护要求。
+选项 1/2 首次缺运行时位置时，只执行 `python -X utf8 "<当前已加载 skill 目录>/scripts/runtime_location.py"` 一次；它解析目录链接或本机安装记录，具体规则见通用接口。已有结果直接复用，禁止用 find、递归 glob、逐层 ls 或搜索 core_v16.py 定位运行时；选项 3 不定位运行时。
 
-## 0. 先确定试听阶段与本地音频能力（所有应用共用）
+用户说“先等一下”“先看网页”时，立即暂停原授权推进，处理新请求；不继续 propose、ask 或运行生成。看网页不确认绑定变更、不触发付费；当前任务已回答时可自动准备预填旧值的新版本供查看/修改。
 
-新配音任务必须先做角色音色试听：**角色分析与绑定 → 每个角色选一句 → 展示并确认首轮试听单与付费范围 → 交付各角色独立 WAV → 用户确认音色 → 审阅、授权剩余对白 → 分批生成与最终合并**。绑定完成只表示选好了声音，不表示用户已试听或认可实际听感。不得从绑定直接跳到整稿生成。
+## 1. 选择生成路径
 
-例如三个人六句对白：首轮只选三句，每个角色一句，分别交付三个可播放音频；用户确认这三个声音后，才处理其余三句。完整剧本可以先展示供审阅，但不能因此把全部六句作为首轮试听单或首个生成 Job。角色选句以本节规则为准，不机械取前 N 句。
+先根据用户意图和当前会话可用工具确定路径，再执行任何项目查询。当前任务已选路径或用户明确指定路径时不重复问；尚未选择则必须在聊天列出下列可用选项并等待选择，不能自行默认网页绑定。仅项目库中存在声音或其他任务曾绑定，不代表本次已选入口。可先写文案，但不先读厂商/选声文档，不执行配方 A/B 或 choices()，不为展示选项 3 探索仓库。
 
-中文对白以至少 **20 个有效文字**作为建议选句下限（不计标点、空格和控制标签；这是试听经验规则，不是厂商限制，也不保证固定时长）。按该角色的原文顺序检查：第一句达到下限就选第一句；不足则检查第二句，依次选择最早达到下限的一句。如果该角色所有句子都不足 20 字，选择有效文字最多的一句；并列时取最早出现的。只有一句就使用该句，不凑字、不擅自改写或拼接。其他语言按足够判断音色的完整自然对白选择，不机械套用中文字符数。向用户注明选取的原句编号以及短句回退情况。
+- **1、自己配置声音（使用我的声音）**：复用已有绑定、指定 ID 或默认；缺信息只补缺项。自行管理时才打开 Studio，不强制推荐或网页。
+- **2、推荐音色（帮我选声音）**：从核实目录匹配，默认每角色推荐 2～3 个有区别且合适的音色（最多 3 个），标明主选和备选，解释声线或演绎适配的差异；不因任务简单或篇幅短就缩为一个。仅用户明确要求“直接帮我定一个”等单选，或核实后确实只有一个合适候选时才只给一个；后者说明原因，不编造或凑数。展示名称、ID、理由/来源，全部候选入项目库；明确提供试听一个、部分或全部的选项，等待用户选择范围后再准备对应试听，不默认全部生成。试听后再最终绑定，其他候选保留。推荐不是付费许可。MiniMax `get_voice` 只列音色，匹配由 Agent 完成。
+- **3、使用当前应用内置工具生成音频**：仅 Kimi/豆包当前会话实际可调用内置音频工具时提供，按角色与文案描述生成声音。具体工具名和参数只在当前应用专属说明中维护，不把公共选项名当作 API。Kimi 结果不加入项目声音库或音色数据库；豆包未返回可复用音色 ID 时同样只交付音频，不造 ID 入库。豆包所说的“专业配音流程（SoundMaker）”就是本 skill 的选项 1/2，不能当内置工具再调用自己。
 
-按角色首次出场顺序，每批最多五个不同角色，每个角色仅一句；角色很少时不凑满五段。超过五个角色时继续下一组，直到所有角色均试听。保留原句 ID。完整 Question 不能提交局部演绎单：先完成声音绑定，再基于保存的绑定快照为选中原句建立对应小批 manifest/Question，或使用已验证的直接请求路径；不得伪造网页 Answer，也不得为满足整单校验而把未试听角色的剩余句子全部生成。
+**选项 3 不走** MiniMax/火山配置、角色绑定、Question/Answer、候选入库、配方 D 或付费 Job 冻结；只读当前应用的内置音频说明，核对实际工具能力、用户要求与调用范围后生成和交付。没有该工具就不展示或承诺选项 3，用户明确要求时说明不可用并提供选项 1/2，不扫描源码找入口。以下 §3/§4 的项目试听、演绎单和批次规则只用于选项 1/2；内置结果不承诺后续稳定复用相同声线。
 
-**音频依赖应在展示生成授权范围之前检查**：从运行时仓库执行 `python -m makesound.media`，不读取密钥、不调用厂商、不下载。优先复用 PATH 或当前用户 WinGet 目录中已有的 FFmpeg/FFprobe；路径未找到不等于系统没有安装，也不代表应用不能处理音频。返回 `wav_only` 时使用已校验的单声道 16-bit PCM WAV；相同采样率的 WAV 保存、时长检查、追加静音、拼接和 SRT 导出可在本地完成。不得因缺失工具自动下载安装、长时间寻找下载源或修改全局 PATH。MP3 编码和重采样仍需要外部工具；缺失时说明限制，在冻结 Job 前明确改用 WAV。已冻结任务不静默改变输出格式。
+仅选项 1/2 且需要确定厂商时，从安全摘要选择：只有一家已配置且已适配则默认该家；无配置显示“2.a、配置 MiniMax API Key”，用户选择后按 MiniMax 入口自动创建/打开本机 JSON，等待保存再检查。两家均已配置且已适配才提供“2.a MiniMax / 2.b 火山引擎”；当前火山未适配，不提供入口。模型用有效默认，只有一个可用模型可沿用，多个无默认才问。密钥不发聊天，文件存在不等于配置完整或线上鉴权通过。
 
-用户明确要求执行一份完整外部演绎单，或已试听并明确要求直接生成全部时，按其明确范围执行，不重复增加试听关卡；“完成绑定”“确认剧本”或普通“生成配音”不能当作跳过首轮音色试听的指令。
+### 选项 3 的独立执行与结束
 
-## 1. Identify roles and report the required format
+选定后只读取当前应用的一份内置音频说明。保留原文或先准备文案，依据当前工具实际支持的描述自动选择合适声线；明确内容和生成范围时直接执行，不增加强制候选试听、演绎单、逐批 hash 确认或媒体依赖检查。多角色输出能力、时长、格式及授权要求按实际工具说明；用户要求超出能力时只解决该缺项，不承诺稳定复用声线。
 
-Read the manuscript without silently rewriting it. Return a role analysis before binding voices, using this format for every speaking role:
+内置结果的修改、失败和交付仍走当前应用说明；记住已用工具、原文/描述、返回产物和实际状态，不创建项目内部 ID。只交付真实返回的音频/链接及实际可用字幕，不强制分句、合并、SRT 或整套项目文档；没有本地文件不伪造路径。完成后结束本次流程，不继续执行下面的项目试听和生成。工具失败或不可用时保留结果并说明原因，不自动回退或切换到其他工具、厂商或选项；需要切换时先让用户选择，已有项目绑定保留不变。
 
-```markdown
-## 角色分析
+## 2. 准备文案与解析已有声音
 
-### 主角 1：<角色名>
-- 性格/演绎特征：<基于原文的简短描述>
-- 推荐声音：<声线特征或可用项目声音>
-- 当前绑定：<项目声音名称和 Voice ID，或“待用户绑定”>
-- 绑定方式：<明确指定 / 默认解析 / 待 Studio 补齐>
-```
+已有原稿保持原文、稳定段落/句子 ID；只有主题则先准备文案，缺少明显影响结果的信息才问。单人短口播简述用途、声线和绑定即可；多角色简述各角色的原文依据、演绎特征、建议声线、当前绑定，不虚构性别/形象，区分事实与推荐。
 
-Distinguish facts from recommendations. Do not infer gender from a name; use only user or task-provided requirements.
+角色性别要求与音色库分类分开：不从角色名字猜性别；推荐请求已明确男声/女声时，入库可沿用该要求填 male/female，在理由中标注“分类依据：请求要求”，不冒充厂商已核实。也可依据厂商目录/描述或用户已有分类；未知或特殊音色用 other。厂商信息或试听与请求明显冲突时换推荐或核对，不硬贴分类，也不把推荐音色统一归“其他”。
 
-## 2. Resolve voices before opening Studio
+仅选项 1/2，在首次写任务 JSON 前按通用接口准备一次任务工作目录；原稿解析、推荐、绑定、演绎 items/targets 和工具输出均写返回的 `inputs_dir`，跨批次复用，不散落项目根目录、不创建临时脚本。用户可读文档和音频只放 `配音/<任务名称>/`；内部导出留在 `.makesound/exports`。选项 3 不为整理文件创建项目工作目录。
 
-If the user explicitly requests a project default or a named project voice, check that it exists, is not deleted, resolves for this project, and has an available provider/model configuration. If it is usable, bind it directly and do not open Studio.
+选项 1/2 按配方 A 查询项目一次；明确指定的项目声音/默认可用时直接复用，不打开网页。核对未删除、项目可解析、厂商/模型配置可用；默认以保存快照为准，不能被后来改名或隐藏的卡片替换。需要新任务才用配方 B 保存完整原稿，不重新创建已有 Question。用户选项 3 或已明确要使用内置工具时，跳过这些项目接口，不先检查厂商配置或要求绑定。
 
-If every required role is resolved, continue without Studio. Otherwise, the agent must create a Question, start the project’s persistent Voice Studio service for that exact Question, and open its returned local URL for the user. Do not ask the user to run a terminal command, choose a port, or supply a Question ID.
+## 3. 项目音色共用试听（仅选项 1/2）
 
-The user’s only Studio action is to bind each role, speed, and pitch, then save the Answer. Keep the service available while the user works and resume from that immutable saved Answer. Studio is for binding only; it does not create a performance plan or call a provider. If the agent runtime cannot retain a local service, treat that as an execution-environment failure to repair; do not make manual service startup part of the product workflow.
+普通新任务先试听，再生成剩余内容；完成绑定或认可剧本不等于认可听感。已有相同原文、声音、实际参数和演绎的试听且获认可则复用；用户已试听并明确要求直接生成、或明确执行完整外部演绎单时，沿用其范围，不重复设置试听关卡。
 
-## 3. Produce the 配音演绎单
+候选试听前先为选中原句确定正式配音的目标情绪和受支持发声控制，连同语速/声调一并展示；适合自然演绎或无法明确时可用自动，不统一强制 auto。同角色候选用相同原文和演绎参数，减少选声后再次演绎的需要，不提前要求审阅整稿。选定后按选声契约将已有试听与最终目标逐句比较：原文、音色、模型、实际参数及发声控制一致且获认可才复用；情绪等生成参数改变则列明差异和新增范围，审阅后重新生成。不能只因已有音频就跳过，也不因换阶段而强制重做。段间停顿本地处理，不为它调用 TTS；原试听和缓存保留。十句中三条已选试听与最终目标一致时才是复用三句、生成七句，并非固定规则。
 
-After all roles are bound, apply section 0 first: create the **首轮角色试听演绎单** with one selected original line per role, not the full manuscript. Read the selected provider reference (MiniMax: references/minimax.md) to check supported controls and local implementation limits. Create a reviewable **配音演绎单** for the selected batch. Include the role, exact source text and original sentence ID, bound voice name from its saved binding snapshot, and only supported, locally implemented controls. Do not look up the current library name for a saved default or answered binding. Persist and render it through the project’s `makesound.performance_plan` module when using a corresponding batch Question; otherwise follow the verified direct-request contract in references/performance-plan.md.
+- **推荐候选**：最终绑定前，候选试听使用选声契约 `audition` / `freeze_audition`，不用配方 D、不要求 Answer。同角色候选用同一句原文和可支持的相同参数，每候选独立交付。用户最终选定后才保存绑定。
+- **自行配置/已有绑定**：保存绑定后用配方 C 读真实 Answer，未试听角色选句，用配方 D 及其快照创建首轮单。不要用项目库后来修改覆盖快照。
 
-For every control, use the selected provider reference and runtime validation to check BOTH the exact model capability and supported adapter behavior; do not inspect adapter source during normal execution. Explain unsupported, unimplemented, or unverified capabilities once in the binding explanation BEFORE the performance plan. Omit those columns/fields from the user-facing performance plan and omit their request fields; do not retain equivalent demands in delivery_notes. If the user explicitly asks for an unavailable effect, resolve that conflict before confirmation. Supported controls can remain automatic. Ordinary spoken fillers are manuscript text, distinct from provider sound tags.
+**试听选句规则**：中文按角色原稿顺序选最早达到 20 个有效文字的一句（不计标点/空格/控制标签）；全部不足时选最长一句，并列取最早；只有一句就用该句，不改写、拼接或凑字。20 字是经验建议，不是厂商限制/固定时长；其他语言选足够判断音色的自然完整句。注明原句 ID 和短句回退。已绑定角色按出场顺序，每批最多五角色、每角色一句，不凑满；候选试听每角色最多三音色。
 
+## 4. 项目演绎单、授权与生成（仅选项 1/2）
 
-Obtain confirmation of the specific displayed plan. Natural-language confirmation is sufficient; the agent records the corresponding internal hash through the existing confirmation function. Do not require users to supply or type a hash. Approval of a general idea is not approval of changed text, voices, or parameters.
+项目生成前检查媒体能力一次，读取所选厂商能力。已绑定角色提出演绎单时才读演绎单契约；候选试听只用选声契约，不为它额外读演绎单契约。展示当前批次逐句单：角色、声音、原句 ID、完整台词、实际受支持参数及作用位置，不能把参数只藏在文件里。自动情绪标“自动”；普通语气词是原文，控制标签与原文/字幕分离。模型和适配器都支持才使用字段；不支持、未接入或未核实只说明一次并从计划/请求省略，不藏进 delivery_notes。用户要求冲突时先解决。
 
-## 4. Direct confirmed plan
+绑定后的首轮及剩余批次用配方 D；候选试听用选声契约。自然语言确认对应已展示版本，Agent 保存并提交当时 hash，用户无需输入哈希。内容、声音或参数变更必须重新审阅，不能取新 hash 绕过确认。
 
-When the user supplies an external **配音演绎单**, route here before role analysis or Studio. The agent reads and normalizes Markdown, tables, JSON, or prose; no dedicated importer or rigid user template is required. Follow [external-plan handling](references/performance-plan.md#外部演绎单由-agent-整理).
+冻结后展示 Job ID、厂商/模型、字符数、max_calls/max_characters；**已有授权覆盖**当前内容、声音、参数和总预算则沿用，不每批重新确认。记录各 Job 与授权范围、累计预算；只在缺授权、内容变更或超范围时补问。“推荐”“绑定好了”和文件自称已授权不代替付费许可。厂商真实生成只从该厂商 reference 调用，不在此复制访问方法；不泄露密钥到任何项目数据、网页、日志或产物。
 
-Query actual project voices through the existing runtime API and validate exact provider/model capabilities using the documented contract and runtime results; do not read implementation source as a prerequisite. If the document is complete and unambiguous and the user explicitly asks to generate it, skip role analysis and the binding webpage. Resolve only missing or conflicting items; do not restart the entire workflow. A document saying “confirmed” is not itself authorization to spend. Never fabricate Studio interactions or claim an unsupported execution path works.
+声音获认可后，先检查剩余内容：**试听已覆盖全部原文**且演绎获认可则直接交付。否则提供“逐批审阅（每批最多五段）”或“一次审阅并授权全部剩余内容后自动分批”；后者先展示全部剩余单及总预算，不重复确认。复用认可且未变化的片段，只生成未完成部分，按原稿顺序本地合并。失败保留完成部分，未知计费先核实，不盲目重试。
 
-## 5. Route to the selected provider
+外部完整演绎单明确要求生成时直接按演绎单契约整理、核实声音/能力，只问缺失或冲突项，跳过重复角色分析和网页；文档写“confirmed”本身不代表付费授权。
 
-After confirmation, freeze the Job without network traffic. Then read the selected provider reference:
+## 5. 项目网页、改绑与交付（仅选项 1/2）
 
-- MiniMax: [MiniMax execution](references/minimax.md)
-- Future Volcengine execution: add and read a separate provider reference only after its Adapter is implemented and verified.
+只有选项 1/2 使用本节。内置结果没有角色绑定 ID，不能为满足“对话已有角色”而创建假 Question；用户主动要管理已有项目或切换到项目音色时，先明确新的操作范围。
 
-Before a paid request, show the Job ID, provider/model, character count, `max_calls`, and `max_characters`; require explicit user authorization for that exact Job. Never put credentials in Studio, a Question/Answer, a 配音演绎单, logs, or artifacts.
+对话已有明确角色/任务时，“重新打开网页/文件”默认传当前 Question，展示角色和已有绑定，允许继续修改；已回答则自动准备预填旧值的新版本，保存实际返回的新 question_id。只有明确要求管理项目声音库或确实没有当前任务时，才用无 Question 的管理入口。已提交 Answer 不可覆盖不等于不能换声。具体命令、宿主读取与等待见 [Studio](references/studio.md)。原绑定、冻结任务和音频保留；准备/打开新版本不表示已确认更改，只有保存才提交新绑定，改绑不自动生成。
 
-MiniMax 的标准生成入口是 `python -m makesound.production run --project <目标项目绝对路径> --job <已冻结的Job> --authorize-paid --max-calls <本批上限> --max-characters <本批字符上限>`，仅在已有对应授权时执行。该入口会接入 MiniMax 适配器；不得用未注入适配器的 `Generation(core).run(...)` 执行真实 MiniMax。`provider_not_implemented` 先检查所用入口和适配器，不直接认定厂商不可用。修复本地导出用 export / repair-audio，不重新发起合成。
+试听逐个展示角色、原句及可播放/可点击音频，不能只给目录或合并版。最终先提供合并音频，再逐个链接独立片段与零基字幕；本地按确认段间停顿拼接，不再调用厂商、不破坏内部引用。用户入口为 `配音/<任务名称>/<版本>/`，依交付规范整理，保留旧版与完整分句集合。
 
-Read [the performance-plan contract](references/performance-plan.md) whenever creating, validating, confirming, or freezing a 配音演绎单.
+候选音频成功但字幕不可用时，按选声契约直接核对并交付试听，不先尝试一串导出/音频修复命令。需要正式字幕时才按厂商恢复入口处理，字幕缺失不能阻塞选声或触发 TTS 重做。
 
-## Automatic binding-session launcher
-
-**Studio UI language:** Use the language of your current user-facing response as Studio's default language. Follow the user's explicit response-language instruction when present; otherwise use the main language you are using to explain this task. English → `--ui-language en`; Chinese (including Traditional Chinese) → `--ui-language zh-CN` (the UI currently uses Simplified Chinese). For mixed responses use the main explanatory language; if unclear or unsupported, use `--ui-language zh-CN`. Do not use the language of the manuscript, quoted text, code, or voice output to decide. Pass the resolved flag on every Studio launch; do not read Harness app settings or infer from OS/browser locale. An explicit user request for Studio's language takes precedence over the response-language default; the page's saved/manual “中 / 英” choice remains highest priority. Switching preserves unsaved drafts. This is an agent-supplied launch preference, not automatic conversation detection by the backend or live synchronization.
-
-
-From the SoundMaker repository, the agent runs `python -m makesound.studio_session --project <absolute-project-path> --question <question-id>`. The launcher starts a hidden one-session server, verifies its actual HTTP response and exact Question, and returns a local URL. Open that returned URL with the host browser tool; never assume port 13265. Re-running the launcher reuses the verified live session. The user never runs this command.
-
-For WorkBuddy, first read [its host lifecycle requirements](references/harnesses/workbuddy.md). Run that command using the host's managed background task (`run_in_background: true`), then read the live task output for its URL and open it while the task is still running. After opening the URL, keep this SAME turn active by waiting on that task with TaskOutput(block=true); if it returns running, wait again on the same task. Do not finish the reply while bindings are pending. The saved Answer returns through the original host task, after which you read it and produce the review plan. The CLI exits only after completion; do not wait for command exit before opening Studio or replace it with a detached child.
-
-On Windows, perform launch and HTTP verification in the same approved host context. If the sandbox blocks loopback or process inspection, request the appropriate tool escalation; absence of a sandbox-visible listener does not prove the host process stopped. Do not create scheduled tasks to work around this.
-
-Before launching, read [Harness resume](references/harness-resume.md). A successful Complete submission persists the Answer, then attempts notification through the registered Harness adapter before returning `session_complete: true` and stopping the server. Codex queue and Claude native notification are implemented. In Claude, run the launcher from this session’s Bash tool so it inherits CLAUDE_CODE_MESSAGING_SOCKET/TOKEN; never copy tokens or choose another session. Tokens stay in inherited environment, not saved artifacts. Conflicting Claude/Codex identities are rejected. queued means accepted, not proof that the agent has resumed; Claude sent_unconfirmed only means the native stream was written, not delivery or model execution. Read the persisted Answer after the event and create the review plan; do not infer paid authorization. On failure, the page asks the user to send “完成了” in the original chat. Browser closure remains host-dependent. Next time a new binding is needed, start a new Question session.
-
-首轮试听优先逐个展示每个角色的独立音频，标清角色和对应原句，再等待用户确认声音；合并试听不能替代各角色试听入口。最终交付 includes a merged audio track for immediate listening AND retained individual audio files for every confirmed dialogue segment, with separate zero-based subtitles. Present the final merged track first and link the segment directory/files for editing. Include segment boundaries and suggested gaps in the review plan. Build the merged track locally from the retained segments using the confirmed gaps; never make extra provider calls just to create the merged version. Preserve both versions.
-
-## 项目文件与交付目录
-
-生成演绎单、导出音频或修订交付时，必须读取并遵守 [文件与交付规范](references/delivery-layout.md)。使用当前项目下 `配音/<任务名称>/` 作为用户交付入口，按可读版本目录保存完整可用的分句集合与合并试听；内部 Job ID、缓存和收据不作为用户找文件的主要入口。当前运行时仍输出 `outputs/audio/<job_id>`，按规范进行本地交付整理，不移动或破坏其引用。
-
-## Targeted revisions and actionable failures
-Read [revision and recovery](references/revision-and-recovery.md) when the user changes one line or when binding, configuration, network, synthesis, or export fails. Review only the changed line and its before/after values; obtain confirmation before the paid replacement call. Preserve every original artifact, synthesize only the changed line, and locally rebuild the merged version. Deliver three clearly labeled audio items: revised merged track, replacement line, and original line. Report concrete sanitized failure evidence, affected scope, and the next corrective action; never invent a cause or blindly retry an uncertain paid request.
-
-
-## 音色试听确认后的后续分批生成
-
-用户确认音色后，提供两种后续方式：①每五段审阅、确认后继续；②一次审阅并授权全部剩余演绎单，随后自动逐批执行。第二种不要求每批再次确认，但必须先展示全部剩余对白、参数及总调用/字符范围。两种方式执行时都每批最多五段、批内逐段请求。不得把选择模式当作未展示内容的生成授权。
-
-首轮已经成功生成且文本、声音、参数不变的句子直接复用，不重复付费。最终按原剧本顺序合并，保留每段音频和字幕。失败时保留已完成产物，费用结果不明时先核实，不盲目重试。单句过长的拆分须确认边界。这是 Agent 使用现有任务接口的编排规则，并非新增自动调度器。完整 Question 不能提交局部演绎单；选句试听应使用对应小批 manifest 或已验证的直接请求路径。
-
-## 聊天中的逐句演绎展示
-
-不能只给对白并把表演参数藏在文件链接中。聊天回复与保存的演绎单都必须逐句展示：角色、绑定声音、原对白，以及实际使用的受支持参数。格式例如：
-
-**第 2 句 · 阿哲 · 温柔霸总**【情绪：平静 calm】【语速：1.0】【声调：0】
-“好，我知道了。”
-【发声动作：句首叹气 (sighs)】【句中停顿：“好，”后 0.3 秒】【段后停顿：0.35 秒，合并时添加】
-
-示例参数不得机械套用。情绪自动时明确写【情绪：自动】。语气词、发声动作、句中停顿有使用才显示，并标清位置；普通语气词属于朗读原文，不能把说明括号当成朗读内容。只展示所选厂商/模型与本地已支持的字段；不支持的能力仍只在绑定说明中交代。用户可直接据此修改某一句。请求文本、原文、字幕保持既有分离规则。
-
-项目声音库试听复用生成结果，不额外调用厂商：生成结果完整复制为独立试听副本，不截取，不限制十秒；原始音频不修改。绑定完成关闭服务后页面不再提供在线试听；需要继续选声或试听时重新启动 Studio。
+明确分别报告音频、字幕、合并/导出状态；字幕失败保留音频，仅按已有入口修复，不为字幕重新合成，不承诺未经验证的修复成功。局部改句只审阅并生成受影响部分，给新版合并、替换句、原句三个入口。所有完成声明以实际状态及文件验证为准。

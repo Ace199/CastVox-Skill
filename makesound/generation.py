@@ -28,15 +28,17 @@ class Generation:
     def freeze(self, segments, *, confirmed=False, authorized=False):
         return self._freeze(segments, confirmed=confirmed, authorized=authorized)
 
-    def freeze_from_answer(self, question_id, harness_session_id, segments, *, confirmed=False, authorized=False):
+    def freeze_from_answer(self, question_id, harness_session_id, segments, *, confirmed=False, authorized=False, job_id=None):
         from .questions import Questions
         v.identifier(harness_session_id)
         question = Questions(self.core).read(question_id)
         require(question["status"] == "answered" and question["claimed_by"] == harness_session_id
                 and question["harness_session_id"] == harness_session_id,
                 "answer_not_claimed", "Harness must claim this answer before freezing its Job.")
+        if job_id is not None:
+            v.identifier(job_id)
         return self._freeze(segments, confirmed=confirmed, authorized=authorized,
-                            answer=question["answer"], job_id=question["job_id"])
+                            answer=question["answer"], job_id=job_id or question["job_id"])
 
     def _freeze(self, segments, *, confirmed, authorized, answer=None, job_id=None):
         require(confirmed is True and authorized is True, "authorization_required", "Confirmed text and task authorization are required.")
@@ -230,7 +232,7 @@ class Generation:
             group = "whole" if mode == "whole" else chunk["paragraph_id"] if mode == "paragraph" else chunk["sentence_id"]
             groups.setdefault(group, []).append(chunk)
         exports = []
-        output_folder = self.core.output_path(f"outputs/audio/{snap['job_id']}")
+        output_folder = self.core.output_path(f".makesound/exports/audio/{snap['job_id']}")
         output_folder.mkdir(parents=True, exist_ok=True)
         for group, chunks in groups.items():
             target = output_folder / (group + ".wav")

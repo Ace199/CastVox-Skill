@@ -162,9 +162,29 @@ class MiniMaxMedia(Fixture, unittest.TestCase):
 
     def test_subtitle_transport_blocks_private_addresses_and_credentials(self):
         with patch('socket.getaddrinfo', return_value=[(2, 1, 6, '', ('127.0.0.1', 443))]), patch('http.client.HTTPSConnection') as connection:
-            self.error('unsafe_url', lambda: HTTPSMiniMaxTransport().request('https://public.example.test/subtitle'))
+            self.error('subtitle_dns_not_public', lambda: HTTPSMiniMaxTransport().request('https://public.example.test/subtitle'))
             connection.assert_not_called()
         self.error('unsafe_url', lambda: HTTPSMiniMaxTransport().request('http://public.example.test/subtitle'))
+
+    def test_fake_ip_dns_error_survives_download_wrapper_without_leaking_signed_url(self):
+        from makesound.minimax_provider import download_subtitles
+        with patch('socket.getaddrinfo', return_value=[(2, 1, 6, '', ('198.18.0.249', 443))]), \
+                patch('http.client.HTTPSConnection') as connection:
+            self.error('subtitle_dns_not_public', lambda: download_subtitles(
+                'https://public.example.test/subtitle?signature=PRIVATE_TEST_CREDENTIAL', '原文。', 6,
+                transport=HTTPSMiniMaxTransport()))
+            connection.assert_not_called()
+        snap = self.freeze()
+        original = self.transport.request
+        def fail_download(url, **kwargs):
+            if kwargs.get('body') is None:
+                raise MakeSoundError('subtitle_dns_not_public', 'No public DNS address.')
+            return original(url, **kwargs)
+        with patch.object(self.transport, 'request', side_effect=fail_download):
+            result = Generation(self.core, minimax=self.adapter(snap)).run(snap['job_id'])
+        self.assertEqual(result['chunks']['chunk_000000']['subtitle_error'], 'subtitle_dns_not_public')
+        self.assertEqual(result['chunks']['chunk_000000']['status'], 'success')
+        self.assertEqual(self.transport.posts, 1)
 
     def test_public_download_pins_checked_ip_uses_tls_hostname_and_no_api_key(self):
         connection = unittest.mock.MagicMock()

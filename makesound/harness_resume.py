@@ -14,8 +14,10 @@ from .questions import Questions
 from .storage import atomic_write, file_lock, read_json
 
 
-def register_environment(core, qid, codex_thread=None):
-    target = environment_target(codex_thread, core=core, qid=qid)
+def register_environment(core, qid, codex_thread=None, *, discovery_question_id=None):
+    # A binding revision has a new identity, while the active host command still
+    # contains the source Question ID. Discover the origin from that command.
+    target = environment_target(codex_thread, core=core, qid=discovery_question_id or qid)
     if target:
         target['question_id'] = qid
         _register_target(core, qid, target)
