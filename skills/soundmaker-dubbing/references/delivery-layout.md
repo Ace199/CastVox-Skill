@@ -56,6 +56,22 @@
 
 新运行时源导出统一为 `.makesound/exports/audio/<job_id>/`，不再新建公开的 `outputs/audio`。已有 `outputs/audio` 文件及引用仍兼容，不擅自移动或删除；`.makesound` 中冻结状态、缓存和收据也不移动。只把需要交付的文件本地复制到可读任务目录。项目根目录不放推荐、绑定、分批 items/targets、命令输出或临时脚本；先按通用接口准备工作目录，使用返回的 `inputs_dir`。不要将工具全部输出保存成用户文档或重复复制运行时已有计划。
 
+### 正式交付入口（候选生成后不使用本入口冒充正式版本）
+
+同一份完整 final-items 用于复用比较、正式生成和本地交付。完成所有范围后调用：
+
+```text
+python -X utf8 -m makesound.final_delivery publish --project "<project>" --question "<current-answered-question_id>" --items "<final-items.json>" --selection "<selection_id>" --job "<completed-job-id>" --task "<stable-task-key>" --title "<任务名称>" --version "v01_初版"
+```
+
+多个实际 Job 重复 `--job`；无推荐选声记录省略 `--selection`，全稿由已认可试听覆盖时可不传 Job。入口根据真实任务状态定位音频，检查原文、保存绑定、实际 provider_directives/inline_controls、哈希、时长及完整覆盖；错参、缺音频或多个不同来源争用同一句时拒绝，不猜缓存哈希、不重新生成。
+
+它只导出已验证且格式匹配的单声道 PCM WAV，按可信 speech_seconds 保留完整供应商语音，去除生成器追加的段后静音；正式分句不再带这段静音，合并按 final-items 仅插入一次段间停顿。没有可信边界或格式不匹配时报告缺项，不猜测裁尾、不自动重采样。严禁 Agent 自写 wave 拼接或手抄缓存路径代替本入口。
+
+入口生成完整版本的分句、合并音频、剧本、记录实际情绪/控制的演绎单、交付说明及内部来源映射，并自动更新文件索引。仅导出真正验证的字幕；有些缺失时保留已可用分句字幕，但不生成不完整的整稿 SRT。返回 audio_status、subtitle_status、index_status 等，字幕缺失为 audio_ready_subtitles_missing；不是全部任务完成。默认声音由单独默认入口保存，本工具返回 default_status=not_changed，不能据此宣称已设置。
+
+同一版本和相同输入重复运行只核对并复用已有交付；输入不同、文件被用户修改或版本目录已存在但没有有效映射时拒绝覆盖。修订用新版本；原音频、旧版、冻结状态和收据保持不变。索引被用户修改时保留音频和版本，返回 index_status=needs_review，不覆盖索引；须单独报告该待办。
+
 ### 固定整理入口
 
 候选试听生成后，直接用本地入口校验并建立用户副本，代替手写复制脚本或先读一遍 `audition_results`。它不生成音频、不下载字幕，不依赖字幕成功；同一 audition 重复执行复用同组及文件名，不覆盖变更过的交付文件。新试听自动分组，名称保留原句 ID、角色和候选名；来源映射保存内部。已有 `试听01` 等目录保留，不为统一命名复制一套。

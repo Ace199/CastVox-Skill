@@ -101,3 +101,10 @@ python -m makesound.production run --project <absolute-project-path> --job <froz
 - `.makesound/`：绑定问答、计划、冻结快照、缓存、预算与通知回执。
 
 这些是项目本机数据，不上传公共仓库。目录链接只同步 skill 源文件，不同步不同项目的声音绑定或任务状态。
+
+
+## 正式交付与默认声音
+
+项目音色路径使用一份完整 final-items 统一复用检查、实际演绎参数和正式交付：`python -m makesound.final_delivery review` 提出待生成批次，确认和授权后仍走原 production 入口；`publish` 仅从已验证音频本地建立完整版本、分句、真实字幕、演绎单与索引。段后静音按可信语音边界去除，再在合并中追加一次，不使用临时拼接脚本。字幕缺失或默认设置未完成时分别报告，不能笼统称全部完成。
+
+用户明确要求将当前角色作为项目默认时使用 `python -m makesound.project_defaults --project <project> --question <answered-question> --revision <reviewed-revision> --slot general`；多角色增加 `--role`，男/女默认仅按用户明确要求选对应 slot。该入口操作 V1.6 快照，不走旧版 config set-default，不生成音频。准确命令及授权边界见 skill 的通用接口和交付规范。

@@ -4,6 +4,21 @@ from tests.helpers import ROOT
 
 
 class VoiceSelectionSkill(unittest.TestCase):
+    def test_fixed_defaults_final_delivery_and_native_tool_evidence_are_explicit(self):
+        root = ROOT / 'skills/soundmaker-dubbing'
+        skill = (root / 'SKILL.md').read_text(encoding='utf-8')
+        workflow = (root / 'references/workflow-api.md').read_text(encoding='utf-8')
+        delivery = (root / 'references/delivery-layout.md').read_text(encoding='utf-8')
+        self.assertIn('SystemList', skill)
+        self.assertIn('实际 schema', skill)
+        self.assertIn('makesound.project_defaults', workflow)
+        self.assertIn('makesound.final_delivery review', workflow)
+        self.assertIn('makesound.final_delivery publish', delivery)
+        self.assertIn('speech_seconds', delivery)
+        self.assertIn('emotion_not_mapped', workflow)
+        self.assertIn('不笼统说全部完成', skill)
+        self.assertIn('不再另建 final-performance-targets.json', workflow)
+
     def test_all_project_references_and_host_recovery_keep_route_boundaries(self):
         refs = ROOT / 'skills/soundmaker-dubbing/references'
         project_docs = ('workflow-api.md','voice-selection.md','performance-plan.md',

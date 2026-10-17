@@ -41,6 +41,8 @@ python -X utf8 -c "import sys,json; from makesound.core_v16 import ProjectCore; 
 
 返回 `voices`、`defaults`、`default_snapshots` 和 `revision`。空库就是需要选声，不是继续探索代码的理由。默认按已保存快照判断，不能因原卡片隐藏而声称默认丢失。需要精确解析某个已知声音时直接调用 `core.resolve(explicit=voice_id)`；默认按明确的声音性别要求调用 `core.resolve(gender='male'或'female')`，无性别要求用 `core.resolve()`，不猜测性别。不读取或打印原始厂商凭据；模型配置交由运行时和 Studio 加载。
 
+本配方不返回厂商配置摘要。需要推荐厂商/模型时直接读选声 reference 的 `choices()` 固定入口，不调用旧 M1 总帮助、config --help、doctor 或 schema 猜接口；这些兼容命令不能代替 V1.6 项目操作。
+
 ### B. 创建可恢复的绑定任务
 
 首次写项目任务 JSON 前准备工作目录一次（本地操作，不创建 Question 或生成音频）：
@@ -75,11 +77,21 @@ python -X utf8 -c "import sys,json; from makesound.core_v16 import ProjectCore; 
 
 网页绑定 `pending` 时按当前 Harness 等待规则等待，不忙轮询、不创建新 Question；`answered` 时使用 `answer.resolved` 中的声音快照。聊天中用户明确选定后，按选声契约提交真实选择；不能为了继续而猜测选择、伪造网页操作或提前 `claim`，冻结入口处理所需领取。没有接收证据时只说“完成后将尝试通知”，不能保证“我一定自动收到”。
 
-**绑定完成后先取得真实 Answer，再检查已有试听。** bind 已返回该 Answer 时直接沿用，不重复执行 C。推荐路径按选声契约给 `reuse_report` 传入最终演绎 targets，仅复用与最终目标一致且获认可的片段，为未完成或情绪/发声控制已变的原句执行 D；无 targets 的已有音频清单不能代替最终参数比较。不强迫沿用试听自动情绪；正常的情绪调整在最终演绎单中列明差异和新增范围。尚未试听的角色才按主 Skill 的试听选句规则选句并执行 D。继续复用原 project、question_id、运行时目录和解释器。读取到 `answered` 后，不再运行 prepare/production 的 `--help`，不重新查询声音库或读取 questions.py；根据本次未完成范围，直接提交对应批次配方。缺少原稿上下文时只读本次原稿文件或 `.makesound/handoffs/<question_id>.json` 的 manifest，这是任务数据，不是程序源码。
+**绑定完成后先取得真实 Answer，再检查已有试听。** bind 已返回该 Answer 时直接沿用，不重复执行 C。推荐路径按 D.1 使用一份完整 final-items 同时推导复用目标与实际批次，仅复用与最终目标一致且获认可的片段；无最终目标的已有音频清单不能代替参数比较。不强迫沿用试听自动情绪；正常的情绪调整在最终演绎单中列明差异和新增范围。尚未试听的角色才按主 Skill 的试听选句规则选句并执行 D。继续复用原 project、question_id、运行时目录和解释器。读取到 `answered` 后，不再运行 prepare/production 的 `--help`，不重新查询声音库或读取 questions.py；根据本次未完成范围，直接提交对应批次配方。缺少原稿上下文时只读本次原稿文件或 `.makesound/handoffs/<question_id>.json` 的 manifest，这是任务数据，不是程序源码。
+
+### C.1 将已选角色声音保存为项目默认
+
+仅用户明确要求时执行，绑定完成本身不设置默认。“把当前声音设为默认”使用 general；明确默认男声/女声时才指定对应 slot，不能因声音性别擅自修改其他槽位。单角色自动取该角色；多角色须明确 `--role`，不猜。先用已知当前 revision；未知时按 A 只读一次。固定入口沿用保存的 Answer，核对当前活动声音来源/参数未变化，写 V1.6 的默认快照，幂等保存不修改绑定或触发生成：
+
+```text
+python -X utf8 -m makesound.project_defaults --project "<project>" --question "<current-answered-question_id>" --revision <reviewed-revision> --slot general
+```
+
+使用返回的 status、revision、defaults 说明成功；冲突/声音变化先核对，不循环改版本号试命令。不要调用旧 M1 `makesound config set-default/show/schema`，它操作另一份兼容数据；不要传正文 JSON 到要求文件路径的 CLI，不因此打开网页代替已有入口。默认修改和音频生成分别报告结果。
 
 ### D. 提出与确认演绎单
 
-准备 UTF-8 `<items.json>` 数组，每项至少包含 `sentence_id`、`emotion`、`delivery_notes`、`pause_after_ms`；字段含义及可选控制仅按 performance-plan / 当前厂商 reference，不查源文件。首轮按主 Skill 的试听选句规则每角色选一句，每批最多五句；items 只写本批选中原句。下方配方从同一个已回答 Question 创建独立批次，显式传入所选 sentence_ids，自动沿用 Answer 快照及原稿顺序。无需新建 Question、重复网页绑定或把快照转换成当前库声音。
+推荐路径最终绑定后优先使用下述“统一正式入口”；自行绑定首轮试听或已有明确批次可沿用本配方。准备 UTF-8 `<items.json>` 数组，每项至少包含 `sentence_id`、`emotion`、`delivery_notes`、`pause_after_ms`；字段含义及可选控制仅按 performance-plan / 当前厂商 reference，不查源文件。首轮按主 Skill 的试听选句规则每角色选一句，每批最多五句；items 只写本批选中原句。下方配方从同一个已回答 Question 创建独立批次，显式传入所选 sentence_ids，自动沿用 Answer 快照及原稿顺序。无需新建 Question、重复网页绑定或把快照转换成当前库声音。
 
 ```text
 python -X utf8 -c "import sys,json; from pathlib import Path; from makesound.core_v16 import ProjectCore; from makesound.performance_plan import propose,render; items=json.loads(Path(sys.argv[3]).read_text(encoding='utf-8-sig')); result=propose(ProjectCore(sys.argv[1]),sys.argv[2],items,sentence_ids=[item['sentence_id'] for item in items]); print(json.dumps({**{k:result[k] for k in ('plan_id','plan_hash','job_id','question_id','sentence_ids','status')},'review':render(result)},ensure_ascii=False))" "<project>" "<question_id>" "<items.json>"
@@ -94,6 +106,18 @@ python -X utf8 -c "import sys,json; from makesound.core_v16 import ProjectCore; 
 必须使用**展示时保存的哈希**，不得读取最新哈希来绕过变更确认。随后用上表 production plan 冻结，再按实际付费授权执行 production run；不是一次连续自动执行整张命令表。
 
 保存本次返回的独立 `job_id`，不要拿原绑定 Question 的 job_id 执行本批。用户认可音色后，剩余句子按每批最多五句重复 D，仍复用原 question_id，使用各批返回的 plan_id/job_id。批次选择、确认和冻结均不调用付费接口；原稿变化会拒绝冻结，需要重新审阅。旧的 `propose(core, question_id, items)` 不传 sentence_ids 时仍要求全稿覆盖，不用于部分选句。
+
+### D.1 统一正式入口：同一份完整 items 计算复用与批次
+
+准备 `<final-items.json>`，覆盖本任务全部原句，字段与 D 一致。实际情绪以 `provider_directives.emotion` 为准；只在描述字段写 calm 不会发给模型，现会报 emotion_not_mapped。指定 calm 时写 `"emotion":"calm","provider_directives":{"emotion":"calm"}`；自动写 `"emotion":"自动","provider_directives":{}`，控制写 inline_controls。不再另建 final-performance-targets.json，不把试听值当作必须沿用的最终目标。
+
+```text
+python -X utf8 -m makesound.final_delivery review --project "<project>" --question "<current-answered-question_id>" --items "<final-items.json>" --selection "<selection_id>"
+```
+
+无推荐选声记录时省略 `--selection`。返回同一份输入计算的 reusable_sentence_ids、remaining_sentence_ids、原稿顺序最多五句的实际 review、plan_id/hash 和独立 job_id；ready_to_publish 表示没有新增句。只展示实际返回的情绪/控制。后续批次显式用可重复的 `--sentence <原句ID>` 选择尚未完成范围；已有已确认/冻结批次直接沿用，不因恢复重新 review。不要再手写另一份 items 改变同一批实际参数。
+
+向用户展示 review 与复用范围，确认后仍用 D 的 confirm、production plan 和所选厂商授权入口执行；review 不授权付费。用户要一次审阅全部时先展示完整 final-items 的可执行目标和总范围，按已有规则逐批冻结，不把第一批确认当全稿授权。最终调用交付规范的 publish，传同一 final-items、实际生成 Job 和 selection，交付时再次检查参数一致。
 
 ### E. 失败才诊断；成功立即推进
 

@@ -114,13 +114,9 @@ revision 使用选定时最近读取的项目版本；试听自动保存也可�
 
 ### 4. 核对已选试听并生成剩余内容
 
-```text
-python -X utf8 -c "import sys,json; from pathlib import Path; from makesound.core_v16 import ProjectCore; from makesound.voice_selection import reuse_report; targets=json.loads(Path(sys.argv[4]).read_text(encoding='utf-8-sig')); print(json.dumps(reuse_report(ProjectCore(sys.argv[1]),sys.argv[2],question_id=sys.argv[3],targets=targets),ensure_ascii=False))" "<project>" "<selection_id>" "<current-answered-question_id>" "<final-performance-targets.json>"
-```
+最终绑定后，按 [通用接口 D.1](workflow-api.md#d1-统一正式入口同一份完整-items-计算复用与批次) 保存一份完整 final-items，并使用 `makesound.final_delivery review`。它从同一份输入推导 targets，核对已选试听并提出最多五句的实际计划；不手写另一份 targets，再手写一份参数可能不同的正式 items。情绪代码 calm 必须同时位于 provider_directives；漏传会拒绝，不静默变为自动。
 
-`<final-performance-targets.json>` 覆盖完整原稿句 ID，每项包含目标 `provider_directives`、`inline_controls`，例如 `{"S1":{"provider_directives":{"emotion":"angry"},"inline_controls":[]},"S2":{"provider_directives":{},"inline_controls":[]}}`，只写实际目标，不照抄试听值来制造复用。语速、声调、音色、模型使用当前已提交绑定快照；需改这些值先按改绑流程确认。
-
-`reuse_report` 不联网、不生成、不修改计划或绑定。它检查当前项目的候选试听记录，按当前已提交 Answer、原文映射、完整最终情绪/发声控制目标筛选，并校验冻结快照、音频哈希和时长，返回 `reusable`、`remaining_sentence_ids` 和 `performance_checked=true`。缺失、损坏或参数不匹配的音频不会列为可复用。未传 targets 的旧调用只返回已有音频清单，标记 `performance_checked=false`，不能据此直接断言无需重生成。改绑后传实际已提交的新 Question；未保存的网页草稿不能用于判断。清单不代表付费授权。
+底层 `reuse_report(core, selection_id, question_id=..., items=full_items)` 保持只读，检查完整原稿、当前已提交 Answer、实际情绪/inline_controls、冻结快照和音频哈希/时长，返回 reusable、remaining_sentence_ids、performance_checked=true。旧 targets 参数仅兼容，不作为新流程配方；items/targets 不能同时传。两者都不传只表示已有音频清单，performance_checked=false，不能据此宣称无需重新生成。改绑后用实际已提交的新 Question；未保存草稿不用于判断，清单不代表付费授权。
 
 情绪或发声控制与最终目标不同，重新生成是合理的：包括从自动改为指定情绪、指定情绪之间变化、增加或删除发声动作。列明旧→新差异和新增调用，随最终演绎单审阅，不强迫沿用 auto，也不为这一步另加重复确认。新付费单只含核对后的 `remaining_sentence_ids`；参数一致的已认可音频才复用，不因换 Job/句子 ID 假定缓存一定命中。段后停顿通过本地拼接处理，不能为停顿变化调用厂商；已有追加静音按可信元数据处理，不裁掉原始语音。复用片段和新片段按完整原稿顺序交付。
 

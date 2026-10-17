@@ -8,9 +8,9 @@
 |---|---|---|
 | 配置与声音 | `config_loader`、`config_resolver`、`provider_config`、`preset_store`、`project_voice_library`、`voice_registry` | 读取本机配置、项目声音、默认与快照 |
 | 项目与存储 | `core_v16`、`storage`、`validation`、`errors` | revision、校验、原子写入、锁和受管理路径 |
-| 绑定 | `questions`、`studio_backend`、`studio_session` | Question / Answer、Studio 生命周期；不发起付费合成 |
+| 选声与绑定 | `voice_selection`、`binding_revision`、`questions`、`studio_backend`、`studio_session`、`project_defaults` | 候选、绑定修订、当前 Answer 保存为 V1.6 项目默认；不发起付费合成 |
 | 表演计划 | `performance_plan`、`inline_controls` | 审阅、确认、声音快照与受支持控制项 |
-| 执行与交付 | `production`、`generation`、`providers`、`minimax_provider`、`media` | 冻结 Job、调用预算、收据、缓存、WAV/MP3/SRT 与本地修复 |
+| 执行与交付 | `production`、`generation`、`providers`、`minimax_provider`、`media`、`project_files`、`final_delivery` | 冻结 Job、调用预算、收据、缓存、WAV/MP3/SRT 与本地修复 |
 | 原会话恢复 | `harness_resume` 及宿主模块 | 自动登记原会话、保存 Answer 后通知、去重与失败回退 |
 | CLI | `cli`、`__main__`、`service`、`jobs`、`offline_harness` | 配置命令与已有契约兼容 |
 
@@ -22,6 +22,10 @@
 skills/soundmaker-dubbing/
   SKILL.md                         # 共用流程与确认阶段
   references/
+    workflow-api.md                # 固定调用、V1.6 默认设置与统一正式 review
+    voice-selection.md             # 候选、试听、绑定及同一份完整 items 复用
+    studio.md                      # 实际开网页时才读取
+    native-audio/                  # 内置路径只读当前应用
     minimax.md                     # 模型能力、参数、执行与错误处理
     performance-plan.md            # 演绎单与直接请求契约
     delivery-layout.md             # 任务与版本交付目录
@@ -58,3 +62,10 @@ skills/soundmaker-dubbing/
 ## 发布内容
 
 运行时、skill、网页、必要静态资源、测试源代码、示例和公开文档可发布。`doc/` 中的 PRD、`docs/` 中的内部过程材料、`archive/`、`wireframes/`、`.makesound/`、`outputs/`、生成交付与配置凭据留在本地。`.gitignore` 对公开文档使用明确白名单，避免未来报告被误加入。
+
+
+## 正式演绎与交付一致性
+
+推荐路径最终绑定后，一份完整 final-items 供 `final_delivery.review` 推导复用目标和正式批次，再经原有确认、冻结及厂商授权执行。`emotion` 说明不等于请求参数；写入已知情绪代码却未映射到 provider_directives 时拒绝，防止 calm 静默变为自动。旧 targets 只保留兼容入口。
+
+`final_delivery.publish` 只读取已成功且内容、绑定、实际情绪/控制一致的 Job/已选试听，并校验音频哈希和可信 speech_seconds。分句去除记录中追加的段后静音，合并仅插入一次确认停顿，完整版本保留实际演绎、字幕缺失状态、来源映射和索引；不调用厂商、不改冻结记录、不隐式重采样或覆盖旧交付。

@@ -39,6 +39,9 @@ def _validate_input(items, source_segments):
         directives = item.get('provider_directives', {})
         require(isinstance(directives, dict) and set(directives) <= {'emotion'}, 'unsupported_directive',
                 'This MiniMax adapter has no verified performance-directive mapping.')
+        if item['emotion'] in {'happy', 'sad', 'angry', 'fearful', 'disgusted', 'surprised', 'calm', 'fluent', 'whisper'}:
+            require(directives.get('emotion') == item['emotion'], 'emotion_not_mapped',
+                    'An emotion code must also be sent in provider_directives; automatic must be explicit.')
         supplied[item['sentence_id']] = item
     expected = [segment['sentence_id'] for segment in source_segments]
     require(set(supplied) == set(expected), 'plan_coverage',

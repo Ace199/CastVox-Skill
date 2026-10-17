@@ -382,7 +382,19 @@ class VoiceSelection(Fixture, unittest.TestCase):
         assignments = self.dump('assignments.json', {'a': sample['project_voice_ids'][0]})
         bound = execute('bind', self.a, selection['selection_id'], assignments, self.core.read()['revision'])
         self.assertEqual(bound['answer']['assignments'], {'a': sample['project_voice_ids'][0]})
-        targets = self.dump('final-performance-targets.json', {'s1': {}})
-        report = execute('reuse_report', self.a, selection['selection_id'], self.qid, targets)
-        self.assertTrue(report['performance_checked'])
+        import shlex
+        full_items = self.dump('final-items.json', [{'sentence_id': 's1', 'emotion': '自动',
+                                   'delivery_notes': '自然', 'pause_after_ms': 0}])
+        workflow = (ROOT / 'skills/soundmaker-dubbing/references/workflow-api.md').read_text(encoding='utf-8')
+        recipe = next(line for line in workflow.splitlines() if line.startswith('python -X utf8 -m makesound.final_delivery review '))
+        replacements = {'python': sys.executable, '<project>': str(self.a), '<current-answered-question_id>': self.qid,
+                        '<final-items.json>': str(full_items), '<selection_id>': selection['selection_id']}
+        command = [replacements.get(arg, arg) for arg in shlex.split(recipe)]
+        result = subprocess.run(command, cwd=ROOT, env=env, capture_output=True, encoding='utf-8', timeout=20)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        report = json.loads(result.stdout)
         self.assertEqual(report['remaining_sentence_ids'], ['s1'])
+        self.assertEqual(report['sentence_ids'], ['s1'])
+        self.assertIn('选择意味着什么？', report['review'])
+        from makesound.performance_plan import read
+        self.assertEqual(read(self.core, report['plan_id'])['segments'][0]['provider_directives'], {})

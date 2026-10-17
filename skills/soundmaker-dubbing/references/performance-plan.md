@@ -4,7 +4,9 @@
 
 “配音演绎单”是用户审阅并确认的表演计划。它不是原剧本，也不是厂商请求体。
 
-Call the documented API below; normal dubbing does not require reading its Python source.
+Call the documented API below; normal dubbing does not require reading its Python source. 推荐路径绑定后优先按 [通用接口 D.1](workflow-api.md#d1-统一正式入口同一份完整-items-计算复用与批次) 使用同一份完整 final-items 进行复用比较和实际批次生成，不另手写 targets。
+
+`emotion` 和 delivery_notes 是说明，真正发送的是 provider_directives / inline_controls。英文情绪代码 calm 等若没有相同 provider_directives.emotion 将报 emotion_not_mapped；自动情绪使用说明“自动”及空 directives，不伪造映射。用户审阅必须采用实际 render 值，不能以说明字段替代实际请求。
 
 `propose(core, question_id, items)` accepts one item per original sentence:
 
@@ -33,7 +35,7 @@ The runtime currently exports audio and SRT under `<project>/.makesound/exports/
 
 Before drafting, check the exact provider/model capability matrix and the local adapter. Explain unsupported, unimplemented, and unknown controls in the preceding binding explanation; omit their user-facing plan columns and request fields, and do not write corresponding performance demands. If the schema requires emotion/delivery_notes text, use the capability-status explanation rather than an unsupported instruction. Automatic supported emotion is distinct from unsupported emotion.
 
-推荐路径先确定最终演绎目标，再按选声契约带 targets 核对已选试听。原文、音色、模型、实际参数、情绪/发声控制均一致且获认可才复用；最终情绪改变需要重生成，属于正常演绎调整，列明差异和新增范围后随本单审阅。不强迫保留试听 auto，也不因已有音频就跳过参数比较。完整交付总览可包含复用句，但实际复用句不进入新付费批次；段后停顿在本地合并处理。十句中三条选定试听与最终目标一致时才生成其余七句；若其中一条情绪改变则生成八句，三条均改变则生成十句。
+推荐路径先确定最终演绎目标，再由统一入口从完整 final-items 推导 targets 并核对已选试听。原文、音色、模型、实际参数、情绪/发声控制均一致且获认可才复用；最终情绪改变需要重生成，属于正常演绎调整，列明差异和新增范围后随本单审阅。不强迫保留试听 auto，也不因已有音频就跳过参数比较。完整交付总览可包含复用句，但实际复用句不进入新付费批次；段后停顿在本地合并处理。十句中三条选定试听与最终目标一致时才生成其余七句；若其中一条情绪改变则生成八句，三条均改变则生成十句。
 
 ## 外部演绎单由 Agent 整理
 

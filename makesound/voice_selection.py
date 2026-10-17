@@ -105,7 +105,29 @@ def create(core, qid, recommendations, revision):
     return selection
 
 
-def reuse_report(core, selection_id, question_id=None, *, targets=None):
+def targets_from_items(core, question_id, items):
+    """Use the same complete input and validation as the actual performance plan."""
+    from .performance_plan import _validate_input
+    question = Questions(core).read(question_id)
+    require(question['status'] == 'answered' and question.get('answer'), 'not_answered', 'Select final voices first.')
+    handoff = read_json(core.managed_path(f'.makesound/handoffs/{question_id}.json'))
+    require(handoff['question_id'] == question_id and handoff['harness_session_id'] == question['harness_session_id'],
+            'session_mismatch', 'Trusted handoff differs.')
+    originals = handoff['manifest']['segments']
+    supplied = _validate_input(items, originals)
+    result = {}
+    for source in originals:
+        item = supplied[source['sentence_id']]
+        resolved = question['answer']['resolved'][source['role_id']]
+        controls = copy.deepcopy(item.get('inline_controls', []))
+        request_text({'source': resolved['source'], 'text': source['text'], 'inline_controls': controls})
+        result[source['sentence_id']] = {
+            'provider_directives': performance_directives(resolved['source'], item.get('provider_directives')),
+            'inline_controls': controls}
+    return result
+
+
+def reuse_report(core, selection_id, question_id=None, *, targets=None, items=None):
     """Report intact selected auditions by original sentence; no plan or synthesis.
 
     With complete final targets, only matching performance is reusable. Without
@@ -115,6 +137,9 @@ def reuse_report(core, selection_id, question_id=None, *, targets=None):
     selection = read_json(_path(core, selection_id))
     require(selection['project_id'] == core.read()['project_id'], 'project_mismatch', 'Selection belongs to another project.')
     qid = question_id or selection['question_id']
+    require(items is None or targets is None, 'invalid_data', 'Use complete items or legacy targets, not both.')
+    if items is not None:
+        targets = targets_from_items(core, qid, items)
     question = Questions(core).read(qid)
     require(question['status'] == 'answered' and question.get('answer'), 'not_answered', 'Select final voices before checking reuse.')
     handoff = read_json(core.managed_path(f'.makesound/handoffs/{qid}.json'))
