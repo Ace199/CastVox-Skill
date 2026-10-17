@@ -13,6 +13,30 @@ This skill is linked into supported local agent hosts from the SoundMaker reposi
 
 Run `python -m makesound...` with the SoundMaker repository as the command working directory, while passing `--project` as the user's CURRENT project absolute path. For Python API calls, instantiate ProjectCore with that same target project. Never substitute the runtime repository for a newly opened user project. Outputs, defaults, voices and task records belong to the target project; do not copy this repository's test voices, defaults or previous jobs into it. A new project may need voice binding/configuration. Reuse the user's provider configuration without exposing credentials. The user should not need to configure launch commands manually.
 
+## 运行优先：正常配音不阅读源码
+
+把已安装的 SoundMaker 运行时当作可直接调用的工具使用。完成上面的运行时定位后，复用当前可用的 Python 环境，在该运行时目录执行命令；本轮记住位置与解释器，不为每个步骤重复扫描仓库。不要为了“了解实现”先读取 `makesound/*.py`、网页源码、测试或 Git 历史，也不要每次重新安装环境、下载依赖、运行完整测试或重写工具。
+
+**操作顺序：本 Skill 的流程规则 → 当前步骤所需的 reference 契约 → 直接执行已有命令/已记录 API → 检查返回状态与产物。** 仅在参数不明确时查看对应入口的 `--help`，不是每次任务都运行所有帮助。reference 中“检查本地实现”“使用某个 .py 模块”“查看函数契约”等表述，正常流程均指采用其中已记录的接口、能力矩阵和运行时验证结果，不要求打开源文件。
+
+| 当前操作 | 已有运行入口 |
+|---|---|
+| 媒体能力检查 | `python -m makesound.media` |
+| 打开本次绑定页 | `python -m makesound.studio_session --project <目标项目绝对路径> --question <本次Question> --ui-language <zh-CN或en>` |
+| 从已确认演绎单冻结 Job | `python -m makesound.production plan --project <目标项目绝对路径> --performance-plan <已确认计划ID>` |
+| 从已审阅并确认的外部请求冻结 Job | `python -m makesound.production plan --project <目标项目绝对路径> --request <已整理的请求JSON路径> --confirmed` |
+| 执行已授权的 Job | 使用 §5 的 `makesound.production run`，必须带本次真实授权及调用/字符上限 |
+| 重新导出已有音频 | `python -m makesound.production export --project <目标项目绝对路径> --job <已有Job>` |
+| 修复已收到音频的本地处理 | `python -m makesound.production repair-audio --project <目标项目绝对路径> --job <已有Job>` |
+
+占位值必须替换为当前任务的真实值；表格不是应全部执行的步骤。`plan` 只冻结任务，不授权付费；不得为了让命令通过而自动补上 `--confirmed` 或 `--authorize-paid`。后者必须对应用户已确认的具体内容和付费范围。不要将不适用于当前状态的 export/repair 当作通用失败重试。
+
+创建 Question、查询声音/绑定、提出与确认演绎单等尚无统一 CLI 的步骤，直接调用 reference 已记录的 Python API；允许编写最小调用脚本导入运行时并传入当前任务数据，不复制业务实现，不直接改写 `.makesound` 内部状态。缺少必要契约时，先查相关 reference 和对应命令帮助；仍缺失就明确记录接口缺口，不能猜造 CLI、函数、参数或成功结果。本规则不表示所有步骤已经有统一命令入口。
+
+**读取代码仅用于有具体证据的异常排查，或用户明确要求开发/审查代码。** 先记录脱敏错误码、失败步骤、退出码和必要输出，排查工作目录、解释器、参数、权限与环境问题；命令正常返回时不得继续读源码“确认一次”。若文档与运行时不符、契约确实缺失或异常无法由现有诊断解决，只读取与该问题直接相关的模块，修复/澄清后立即回到运行流程。普通配音任务不因此自动扩展成重构或新增接口开发。
+
+读取用户原稿、Skill/reference、必要的项目业务数据和返回产物不属于源码阅读。始终依实际返回和文件验证报告结果：命令已启动不等于成功，通知已入队不等于 Agent 已处理，音频文件存在不等于内容/格式校验通过。保留原有试听、审阅、付费授权、原会话归属及凭据保护要求。
+
 ## 0. 先确定试听阶段与本地音频能力（所有应用共用）
 
 新配音任务必须先做角色音色试听：**角色分析与绑定 → 每个角色选一句 → 展示并确认首轮试听单与付费范围 → 交付各角色独立 WAV → 用户确认音色 → 审阅、授权剩余对白 → 分批生成与最终合并**。绑定完成只表示选好了声音，不表示用户已试听或认可实际听感。不得从绑定直接跳到整稿生成。
@@ -55,7 +79,7 @@ The user’s only Studio action is to bind each role, speed, and pitch, then sav
 
 After all roles are bound, apply section 0 first: create the **首轮角色试听演绎单** with one selected original line per role, not the full manuscript. Read the selected provider reference (MiniMax: references/minimax.md) to check supported controls and local implementation limits. Create a reviewable **配音演绎单** for the selected batch. Include the role, exact source text and original sentence ID, bound voice name from its saved binding snapshot, and only supported, locally implemented controls. Do not look up the current library name for a saved default or answered binding. Persist and render it through the project’s `makesound.performance_plan` module when using a corresponding batch Question; otherwise follow the verified direct-request contract in references/performance-plan.md.
 
-For every control, check BOTH the exact model capability and the local adapter implementation. Explain unsupported, unimplemented, or unverified capabilities once in the binding explanation BEFORE the performance plan. Omit those columns/fields from the user-facing performance plan and omit their request fields; do not retain equivalent demands in delivery_notes. If the user explicitly asks for an unavailable effect, resolve that conflict before confirmation. Supported controls can remain automatic. Ordinary spoken fillers are manuscript text, distinct from provider sound tags.
+For every control, use the selected provider reference and runtime validation to check BOTH the exact model capability and supported adapter behavior; do not inspect adapter source during normal execution. Explain unsupported, unimplemented, or unverified capabilities once in the binding explanation BEFORE the performance plan. Omit those columns/fields from the user-facing performance plan and omit their request fields; do not retain equivalent demands in delivery_notes. If the user explicitly asks for an unavailable effect, resolve that conflict before confirmation. Supported controls can remain automatic. Ordinary spoken fillers are manuscript text, distinct from provider sound tags.
 
 
 Obtain confirmation of the specific displayed plan. Natural-language confirmation is sufficient; the agent records the corresponding internal hash through the existing confirmation function. Do not require users to supply or type a hash. Approval of a general idea is not approval of changed text, voices, or parameters.
@@ -64,7 +88,7 @@ Obtain confirmation of the specific displayed plan. Natural-language confirmatio
 
 When the user supplies an external **配音演绎单**, route here before role analysis or Studio. The agent reads and normalizes Markdown, tables, JSON, or prose; no dedicated importer or rigid user template is required. Follow [external-plan handling](references/performance-plan.md#外部演绎单由-agent-整理).
 
-Check actual project voices and exact provider/model capabilities through existing code. If the document is complete and unambiguous and the user explicitly asks to generate it, skip role analysis and the binding webpage. Resolve only missing or conflicting items; do not restart the entire workflow. A document saying “confirmed” is not itself authorization to spend. Never fabricate Studio interactions or claim an unsupported execution path works.
+Query actual project voices through the existing runtime API and validate exact provider/model capabilities using the documented contract and runtime results; do not read implementation source as a prerequisite. If the document is complete and unambiguous and the user explicitly asks to generate it, skip role analysis and the binding webpage. Resolve only missing or conflicting items; do not restart the entire workflow. A document saying “confirmed” is not itself authorization to spend. Never fabricate Studio interactions or claim an unsupported execution path works.
 
 ## 5. Route to the selected provider
 
