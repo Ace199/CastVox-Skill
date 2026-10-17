@@ -1,93 +1,78 @@
-# CastVox-Skill
+# CastVox · AI 多角色配音
 
-### 在你熟悉的 AI 工具里，把剧本做成多角色配音。
+**把剧本交给 Agent，先选声试听，再生成可剪辑的对白、旁白和有声故事。**
 
-贴入一份剧本，让 Agent 帮你分析角色，在聊天中推荐并试听声音，或沿用自己的声音配置，再准备逐句演绎单并生成音频和字幕。需要自行管理声音时，可打开项目选声页面。
+A local-first agent skill for multi-character text-to-speech (TTS), AI voiceovers, and dialogue dubbing with MiniMax.
 
-**先听角色，再生成整稿。改一句，就只重新生成那一句。**
+[English](README.en.md) · [快速开始](#快速开始) · [看看怎么用](#看看怎么用) · [支持的应用](#支持的应用) · [安装与配置](docs/usage.md) · [反馈问题](https://github.com/Ace199/CastVox-Skill/issues)
 
-适合短剧对白、有声故事、视频旁白，以及需要保留分句素材的配音项目。
+![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
+![Voice provider: MiniMax](https://img.shields.io/badge/Voice-MiniMax-4055C8)
+![Local-first](https://img.shields.io/badge/Workflow-Local--first-2D7A65)
 
-[开始使用](#开始使用) · [配音流程](#从剧本到音频) · [应用兼容](#在这些应用中使用) · [详细安装](docs/usage.md)
+适用于 **Codex、Claude Code、Kimi Work、豆包工作**等可执行本地命令的 Agent。真实语音生成已接入 **MiniMax CN**；主要实机验证环境为 Windows。
 
----
+## 为什么用 CastVox？
 
-## 你负责决定声音，Agent 负责推进流程
+多角色配音的工作不止是“把文字读出来”：你还要给人物选声、比较试听、调整演绎，把结果整理给剪辑。改一句后，又得判断哪些音频能继续用。
 
-多角色配音需要处理选声、参数、文件和返工。CastVox 把这些步骤放进你与 Agent 的同一段对话中。
+CastVox 把这套流程放进同一段 Agent 对话：
 
-| 你想做的事 | CastVox 如何处理 |
+| 你要完成的事 | CastVox 帮你做什么 |
 |---|---|
-| 快速给角色挑声音 | 聊天中每角色推荐最多 3 个，按需生成试听，选定后绑定 |
-| 沿用自己的选声工作流 | 直接使用项目声音、明确指定的音色或默认配置，需要时再打开 Voice Studio |
-| 先判断声音合不合适 | 每个角色选一句原对白，分别生成试听，确认后再继续 |
-| 调整一句的演绎 | 逐句展示声音、情绪、语速、声调及实际支持的停顿或发声动作 |
-| 把音频拿去剪辑 | 保留独立分句和字幕，同时整理合并试听版 |
-| 中途改一句台词或换声 | 为变化部分建立新版本，复用其余已校验音频，保留原版本 |
-| 控制生成范围和开销 | 生成前展示本次模型、字符数和调用上限，按明确授权执行 |
+| 为人物挑选合适声线 | 根据角色推荐 2～3 个候选，按你选择的范围试听 |
+| 保持人物声音一致 | 保存项目声音、角色绑定和默认配置，之后继续使用 |
+| 先判断效果再做整稿 | 同角色用同一句原文比较，选定后再生成剩余对白 |
+| 修改台词、换声或调整情绪 | 核对实际变化，复用没变的音频，保留旧版 |
+| 把素材交给剪辑 | 整理独立 WAV、可用 SRT、合并试听、演绎单与文件索引 |
+| 明确本次生成范围 | 生成前展示台词、参数、模型和调用范围，按授权执行 |
 
-已成功生成且文本、声音、参数不变的试听句可以复用，不必为完成整稿再生成一次。音频已收到但字幕或导出失败时，优先修复本地产物，避免盲目重复提交。
+**适合：** 短剧对白、有声故事、视频旁白、角色讨论，以及需要保留分句素材的内容制作。配置、缓存与产物保存在本机，合成文本会发送给所选语音服务。
 
-## 从剧本到音频
+## 看看怎么用
 
-假设你有一段 **3 个角色、6 句对白** 的剧本：
+把这段话复制给已安装 skill 的 Agent，再附上剧本：
 
 ```text
-你：用这份剧本做多角色配音，先让我听听每个角色的声音。
-
-Agent：分析三个角色，打开 Voice Studio。
-你：在页面里为角色选声，点击完成。
-
-Agent：展示三句试听单，每个角色一句，说明参数和本次调用范围。
-你：确认试听单并授权这次生成。
-
-Agent：分别交付三个角色的试听音频。
-你：声音合适，继续生成剩余对白。
-
-Agent：展示剩余三句供审阅，按授权生成，再整理完整交付。
+使用 soundmaker-dubbing 为这份剧本做多角色配音。
+先分析角色，每个角色推荐 2～3 个合适音色，让我选哪些试听。
+同一角色用同一句原文、相同演绎比较；我选定后再准备正式配音。
+生成前展示台词、实际情绪和调用范围。
+最后给我合并试听、独立分句，以及实际可用的字幕。
 ```
 
-这是一段使用流程示意，不是预生成的演示结果。
+没有剧本也可以从主题开始：
 
-你可以每批审阅，也可以先审阅并授权全部剩余内容，再让 Agent 自动逐批执行。实际执行每批最多五段。已有完整外部演绎单，或已经试听并明确要求直接生成时，也可以按指定范围继续。
+> 写一段三个人讨论《麦克白》的短对白，需要配音。先给我文案，再让我选择选声方式。
 
-Voice Studio 支持中文和英文，默认跟随 Agent 当前回答的主语言；顶部“中 / 英”按钮可手动切换，未保存草稿会保留。修改默认声音后，点击“完成设置”会先展示确认，再保存默认并提交绑定；没有默认改动时直接提交。
+下面是**流程示意**，不是音频效果演示：
 
-未绑定角色有“帮我选声音”和“使用我的声音”两个入口。推荐由 Agent 根据已核实的音色目录匹配，每角色最多三个，全部候选加入项目库。用户可只生成部分候选或全部试听；同角色使用同一句原文比较，明确选定后才最终绑定。试听及其他候选保留，后续打开项目声音库可反复听。推荐或入库本身不调用收费生成。
+```text
+你：用这份三人剧本配音。
+Agent：你可以使用自己的声音配置，或让我推荐音色。
+你：推荐，每个角色给两个候选。
+Agent：列出候选名称、ID 和差异，询问要试听哪些。
+你：全部试听。
+Agent：展示同句试听单及费用范围，确认后分别生成。
+你：选好声音了，继续做正式配音。
+Agent：核对最终演绎，复用符合目标的试听，只生成剩余内容。
+你：第二句停顿长一点。
+Agent：本地调整段间停顿，另存新版本，保留原版。
+```
 
-推荐默认使用已有配置且已适配的厂商；尚未配置时，可选择自动创建并打开 MiniMax JSON，在本机填写自己的 API Key。火山引擎尚未适配，暂不提供推荐入口；以后两家都可用时再选择厂商。
+### 选声有三种入口
 
-**点击网页“完成”只是保存声音绑定。** 聊天中的明确选声也可以保存绑定，无需打开网页。音色试听、演绎单确认和付费授权各有明确阶段，Agent 不会把选声完成当成整稿生成许可。
+1. **使用我的声音**：沿用项目绑定、默认声音或指定 Voice ID，适合已有工作流。
+2. **推荐音色**：Agent 从核实目录匹配角色，候选全部入项目库；可试听一个、部分或全部，再最终选定。
+3. **当前应用内置生成**：仅 Kimi/豆包会话确有可调用音频工具时提供。直接交付音频，不进入项目音色库，不承诺跨次保持相同声线。
 
-已有任务可随时重新打开网页，角色及当前声音会保留。已提交绑定通过预填的新版本继续修改，旧音频和任务记录不覆盖；只查看或打开草稿不会自动生成。只有明确管理项目声音库或没有当前任务时，才打开无角色的管理页。
+选项 1/2 需要时才打开 **Voice Studio** 管理声音和绑定；支持中英文，保存后还可以重新打开修改。推荐匹配由 Agent 完成，MiniMax 提供音色目录。
 
-## 交付后，还能继续修改
+## 快速开始
 
-对 Agent 说“第二句换成另一个声音”或“这句停顿再长一点”，它会先给出修改前后的差异，确认后只处理变化部分，并用已有片段重建合并版。
+项目音色路径需要：**可执行本地命令的 Agent、Python 3.11+、可用的 MiniMax CN API 配置**。真实语音生成由服务商计费，配置和入库本身不生成音频。
 
-交付按目标项目的 `配音/<任务名称>/<版本>/` 整理，包含当前版本的分句音频、对应字幕和合并试听。局部修改保留旧版，并提供新版合并音频、替换句与原句的对照入口。
-
-首轮角色试听优先展示各角色的独立音频；完整交付优先提供合并试听，并保留剪辑所需的分句素材。
-
-## 在这些应用中使用
-
-同一个 `soundmaker-dubbing` skill、同一套配音运行时。应用适配层负责识别原会话，以及选声完成后的恢复方式。
-
-| 应用 | 绑定完成后的继续方式 | 兼容说明 |
-|---|---|---|
-| [Codex](skills/soundmaker-dubbing/references/harnesses/codex.md) | 原会话消息队列 | 已验证原聊天唤醒；入队不等于模型已完成处理 |
-| [Claude Code](skills/soundmaker-dubbing/references/harnesses/claude.md) | 原生会话消息 | Windows 2.1.295 已验证；写入状态本身不代表接收确认 |
-| [Kimi Work](skills/soundmaker-dubbing/references/harnesses/kimi.md) | 当前实例的本地控制通道 | Windows 3.2.8 已验证；不覆盖普通 Chat 或独立 CLI |
-| [豆包工作](skills/soundmaker-dubbing/references/harnesses/doubao.md) | Windows 本机桥接 | 2.32.5 已验证；依赖版本与本机实例配置 |
-| [WorkBuddy](skills/soundmaker-dubbing/references/harnesses/workbuddy.md) | 受管理后台任务与 TaskOutput | 已实现等待与返回机制，真实桌面完整流程仍待验收 |
-
-当前实机验证主要在 Windows。应用升级、权限或运行环境变化可能影响恢复；安装 skill 不代表所有版本都能自动唤醒。通知失败时声音绑定仍会保存，可以回原对话说“完成了”继续。
-
-## 开始使用
-
-需要一个能执行本地命令的 Agent、Python 3.11+，以及可用的 MiniMax 国内账号与 API 配置。真实语音生成由 MiniMax 计费。
-
-### 1. 获取项目
+### 1. 克隆仓库
 
 ```powershell
 git clone https://github.com/Ace199/CastVox-Skill.git
@@ -95,46 +80,83 @@ cd CastVox-Skill
 python -m makesound.media
 ```
 
-核心 Python 运行时只依赖标准库。上面的媒体检查不调用语音服务、不产生合成费用，也不下载工具。
+核心 Python 运行时仅依赖标准库。媒体检查不调用语音服务，也不下载安装软件；没有 FFmpeg 时仍支持符合要求、采样率匹配的单声道 PCM WAV，MP3 和重采样需要额外媒体工具。
 
-### 2. 安装 skill，配置声音服务
+### 2. 把 skill 安装到你的 Agent
 
-按 [安装说明](docs/usage.md#安装为目录链接)，把 `skills/soundmaker-dubbing/` 链接到所用应用的 skill 目录，然后新建对话。
-
-按 [配置说明](docs/usage.md#配置和音频工具) 设置本机 MiniMax 配置。Voice Studio 提供配置编辑入口；真实 API Key 留在本机配置中，不需要贴到对话里。
-
-### 3. 把剧本交给 Agent
-
-可以从这句话开始，随后附上你的剧本：
-
-> 使用 soundmaker-dubbing 为下面的剧本配音。先分析角色，让我选择声音；每个角色先生成一句独立试听，等我确认音色后再继续。
-
-如果你还没有剧本，也可以先请 Agent 帮你写好，再进入配音流程。
-
-## 没有 FFmpeg，也能先用 WAV
-
-运行时优先复用已有 FFmpeg / FFprobe，包括 Windows 当前用户的 WinGet Gyan 安装。找不到时，符合要求的单声道 16-bit PCM WAV 仍可校验、保存、按相同采样率拼接并导出字幕。
-
-**不会为了完成配音自动下载安装 FFmpeg。** MP3 编码和重采样仍需要外部媒体工具；缺失时先说明限制，在冻结任务前明确使用 WAV。已确认的输出格式不会被静默替换。
-
-## 当前支持范围
-
-- **语音服务**：已接入 MiniMax CN 同步语音接口；具体模型、情绪、句中停顿和发声动作以 [MiniMax 能力说明](skills/soundmaker-dubbing/references/minimax.md) 为准。官方支持与本地已接入能力会分别说明。
-- **火山引擎**：目前支持配置管理，合成适配器尚未接入。
-- **离线体验**：FakeProvider 可测试选声绑定、恢复和交付链路，输出是测试静音，不是真实配音。
-- **声音效果**：模型参数不等于精确表演承诺，最终以试听结果为准。
-
-## 想了解实现或参与开发？
-
-[代码与 skill 结构](docs/architecture.md) · [完整使用说明](docs/usage.md) · [Voice Studio 开发说明](web/README.md) · [反馈问题](https://github.com/Ace199/CastVox-Skill/issues)
+将 `skills/soundmaker-dubbing/` 链接到应用实际使用的 skill 目录，并重新加载或新建对话。Windows PowerShell 的 **Codex 示例**如下，仅在目标目录不存在时执行：
 
 ```powershell
-python -m unittest discover -s tests -t . -q
-node --test web/tests/v16.test.js web/tests/i18n.test.js web/tests/delete-hover.test.js tests/doubao-control.test.cjs
-python web/tests/test_config_editor.py
-python web/tests/test_provider_config.py
+$skillSource = (Resolve-Path './skills/soundmaker-dubbing').Path
+$skillParent = Join-Path $env:USERPROFILE '.codex/skills'
+New-Item -ItemType Directory -Path $skillParent -Force | Out-Null
+New-Item -ItemType Junction -Path (Join-Path $skillParent 'soundmaker-dubbing') -Target $skillSource
 ```
 
-Python 集成测试需要本机回环网络与子进程权限；语音请求使用替身。浏览器测试另需预先准备 Playwright 和 Chromium。
+Claude Code、Kimi Work、豆包工作和 WorkBuddy 的路径与运行时定位设置见 [完整安装说明](docs/usage.md#安装为目录链接)。已有同名目录先核对并备份，不覆盖。
 
-本机凭据、任务缓存、生成音频和项目交付不随仓库发布。PRD、设计草稿与实施记录也不包含在当前发布文件中。
+### 3. 配置服务，开始第一段配音
+
+告诉 Agent：
+
+> 使用 soundmaker-dubbing 帮我推荐声音。如果 MiniMax 尚未配置，打开本机配置文件让我填写 API Key。先给我试听单，确认后再生成。
+
+Agent 会按需创建或打开 `~/.config/minimax/config.json`。**API Key 留在本机文件里，不贴到聊天中。** 保存后检查配置，再附上剧本或使用上面的示例。
+
+## 你会拿到什么？
+
+项目音色流程把用户交付集中放在一个任务目录：
+
+```text
+你的项目/
+├─ 配音/任务名称/
+│  ├─ 文件索引.md
+│  ├─ 试听/                     # 候选音色逐个试听
+│  └─ v01_初版/
+│     ├─ 合并试听_全文.wav
+│     ├─ 配音演绎单.md
+│     ├─ 交付说明.md
+│     ├─ 剧本.md
+│     └─ 分句/                  # 独立 WAV + 已取得的真实 SRT
+└─ .makesound/                  # 内部状态、输入、缓存及收据
+```
+
+情绪、音色或发声控制改变时，相关句子需要重新生成；只有段间停顿改变时，本地调整即可。字幕下载失败会单独报告并保留音频，不用空字幕冒充成功，也不为补字幕自动重做 TTS。内置生成入口仅交付实际工具返回的文件或链接，不强制这套目录。
+
+## 支持的应用
+
+| 应用 | 当前支持情况 |
+|---|---|
+| [Codex](skills/soundmaker-dubbing/references/harnesses/codex.md) | 已有原聊天唤醒记录；队列接收不等于模型已完成处理 |
+| [Claude Code](skills/soundmaker-dubbing/references/harnesses/claude.md) | Windows 2.1.295 已有绑定恢复记录 |
+| [Kimi Work](skills/soundmaker-dubbing/references/harnesses/kimi.md) | Windows 3.2.8 已有绑定与原会话续跑记录；不等同普通 Chat/独立 CLI |
+| [豆包工作](skills/soundmaker-dubbing/references/harnesses/doubao.md) | Windows 2.32.5 已有绑定恢复记录，依赖当前实例和桥接配置 |
+| [WorkBuddy](skills/soundmaker-dubbing/references/harnesses/workbuddy.md) | 等待与返回机制已实现，真实桌面完整流程待验收 |
+
+同一份 skill 共用配音流程。宿主升级和权限变化可能影响恢复；通知失败时绑定仍会保存，可回原对话说“完成了”继续。macOS/Linux 及不同版本的完整宿主恢复尚未统一实测。
+
+## 常见问题
+
+**是否必须打开厂商网站选声？**
+
+推荐路径可以在聊天里选声、试听和确认。用户自行管理时才开本地 Voice Studio；首次获得服务商账号和 API Key 仍需用户自行完成。
+
+**是否支持火山引擎？**
+
+目前只有配置管理，真实合成适配尚未接入，不提供可执行的火山推荐入口。
+
+**可以先不付费看看流程吗？**
+
+开发测试可使用 FakeProvider 验证绑定、恢复和交付链路，输出是测试静音。真实声音试听与正式生成使用服务商 API，按确认范围执行。
+
+**已有明确声音或完整演绎单，还要重新选一遍吗？**
+
+不需要。可沿用明确配置和有效授权，只补缺项；当前参数与已认可试听一致时复用已有音频。
+
+## 文档与反馈
+
+[安装和配置](docs/usage.md) · [架构与开发](docs/architecture.md) · [Voice Studio](web/README.md) · [English](README.en.md)
+
+欢迎带着你的场景来 [提问或报告问题](https://github.com/Ace199/CastVox-Skill/issues)：使用的 Agent 与版本、所处步骤、期望与实际结果，以及脱敏错误信息，能帮助复现。请勿附上 API Key、私有收据或签名下载链接。
+
+如果 CastVox 对你有用，可以 Star 留作之后的配音工具，也欢迎把仓库分享给做短剧、有声故事或视频旁白的朋友。
