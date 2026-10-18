@@ -30,7 +30,12 @@ class ConfigEditorTests(unittest.TestCase):
         path = self.root / 'minimax/config.json'
         self.assertEqual(self.opened, [path])
         self.assertTrue(result['created'])
-        self.assertEqual(json.loads(path.read_text()), {
+        config = json.loads(path.read_text())
+        comments = {key: value for key, value in config.items() if key.endswith('_comment')}
+        self.assertEqual(set(comments), {'_api_key_comment', '_region_comment', '_base_url_comment',
+                                         '_models_comment', '_default_model_comment'})
+        self.assertTrue(all(value and value.isascii() for value in comments.values()))
+        self.assertEqual({key: value for key, value in config.items() if key not in comments}, {
             'api_key': 'YOUR_API_KEY_HERE', 'region': 'cn',
             'base_url': 'https://api.minimax.cn',
             'models': ['speech-2.8-hd', 'speech-2.8-turbo', 'speech-2.6-hd', 'speech-2.6-turbo',

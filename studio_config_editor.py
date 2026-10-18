@@ -40,12 +40,17 @@ def open_config(provider, config_dir=None, opener=None):
             # Exclusive create also protects an existing file in concurrent requests.
             with path.open('x', encoding='utf-8') as file:
                 template = {'api_key': 'YOUR_API_KEY_HERE', 'region': 'cn',
+                           '_api_key_comment': 'MiniMax API key. Replace the placeholder with your own key.',
+                           '_region_comment': 'API region: cn = Mainland China, international = International. Select the region that matches your MiniMax API account.',
                            'base_url': 'https://api.minimax.cn',
+                           '_base_url_comment': 'API origin. Use https://api.minimax.cn for cn or https://api.minimax.io for international. Must match region.',
                            'models': ['speech-2.8-hd', 'speech-2.8-turbo',
                                       'speech-2.6-hd', 'speech-2.6-turbo',
                                       'speech-02-hd', 'speech-02-turbo',
                                       'speech-01-hd', 'speech-01-turbo'],
-                           'default_model': 'speech-2.8-hd'} if provider == 'minimax' else {
+                           '_models_comment': 'Available TTS models for CastVox. Keep model IDs supported by your MiniMax API account. Comment fields are for reference only and are not sent in API requests.',
+                           'default_model': 'speech-2.8-hd',
+                           '_default_model_comment': 'Default TTS model. Must match a model ID in models.'} if provider == 'minimax' else {
                     'auth_mode': 'api_key', 'api_key': 'YOUR_VOLCENGINE_API_KEY_HERE',
                     'region': 'cn', 'base_url': 'https://openspeech.bytedance.com',
                     'tts_endpoint': '/api/v3/tts/unidirectional', 'resource_id': 'seed-tts-2.0',
