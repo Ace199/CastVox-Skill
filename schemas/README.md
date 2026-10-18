@@ -14,3 +14,7 @@ python -m makesound schema validate --kind snapshot --file '<实际生成的 sna
 ```
 
 这类命令不创建目录、不改文件、不联网。尚未提供可供独立第三方 JSON Schema 工具使用的 draft-2020-12 导出；若后续 Studio 需要前端校验，应从同一正式协议生成并做与 Python 规则的一致性测试，不能另造互相冲突的规则。
+
+## Host Bridge 应用协议
+
+[host-bridge-v1.schema.json](host-bridge-v1.schema.json)独立于配音业务：默认校验统一结果，`#/$defs/submission` 校验网页提交，`#/$defs/start` 校验新版启动参数。语义、兼容与示例见[接入文档](../docs/host-bridge-integration.md)。

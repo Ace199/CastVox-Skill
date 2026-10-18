@@ -1,4 +1,5 @@
 import tempfile
+import os
 import unittest
 import wave
 from pathlib import Path
@@ -47,6 +48,7 @@ class WavFallback(unittest.TestCase):
                 self.assertEqual(caught.exception.code, 'media_tools_missing')
                 self.assertFalse(self.target.exists())
 
+    @unittest.skipUnless(os.name == 'nt', 'Windows WinGet lookup')
     def test_existing_winget_pair_is_found_when_path_is_restricted(self):
         package = self.root / 'AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_test/ffmpeg-8.1.2-full_build/bin'
         package.mkdir(parents=True)

@@ -6,6 +6,8 @@
 
 本适配针对 Claude Code 的原生会话消息机制。已在 Windows Claude Code 2.1.295 验证；其他 Claude App 模式、版本和平台不可据此推断。个人 skill 目录为 `~/.claude/skills`，目录可读与消息恢复是两个独立条件。
 
+Claude App 的 Code 本地会话按本文件核对；Cowork 使用 Studio 中的独立入口，不连带读取两份说明。首次诊断可在原 Code 命令工具执行 `python -X utf8 -m makesound.claude_native --surface code`：available 只证明继承了消息身份，尚未验证接收/回复；正常启动不强制重复检查。
+
 ## 登记与启动
 
 从发起绑定的 Claude Bash 工具运行仓库的 `python -m makesound.studio_session --project <absolute-project-path> --question <qid>`，继承自己的 `CLAUDE_CODE_MESSAGING_SOCKET` 和 `CLAUDE_CODE_MESSAGING_TOKEN`。不得复制另一会话的地址或令牌，不打印凭据。多个 Harness 身份冲突时拒绝猜测；复用旧服务前必须核对它属于当前身份。

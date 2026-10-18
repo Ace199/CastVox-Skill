@@ -8,7 +8,7 @@
 
 仅在本次已确定使用 MiniMax，且需要配置、核实目录、推荐或生成时读取本文件；未选厂商时不预读。此文件维护 MiniMax 的配置和访问方法；不同时加载其他厂商文档。
 
-用户选择配置 MiniMax 后调用 `configure('minimax')`。缺文件会创建安全模板并自动打开本机编辑器，已有文件仅打开；返回 config_path 可交给用户定位。无需打开网站或让用户手动创建 JSON：
+用户选择配置 MiniMax 后调用 `configure('minimax')`。缺文件会创建安全模板并请求打开本机编辑器，已有文件仅打开；Windows 用记事本，macOS 请求默认文本编辑器，不按 JSON 文件关联执行；返回 config_path 可交给用户定位。无需打开网站或让用户手动创建 JSON：
 
 ```text
 python -X utf8 -c "import json; from makesound.voice_selection_entry import configure; print(json.dumps(configure('minimax'),ensure_ascii=False))"

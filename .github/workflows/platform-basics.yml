@@ -1,0 +1,76 @@
+name: Platform basics
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'makesound/**'
+      - 'host_bridge/**'
+      - 'scripts/host_bridge.py'
+      - 'studio*.py'
+      - 'skills/soundmaker-dubbing/**'
+      - 'tests/**'
+      - 'web/tests/test_config_editor.py'
+      - '.github/workflows/platform-basics.yml'
+  pull_request:
+    paths:
+      - 'makesound/**'
+      - 'host_bridge/**'
+      - 'scripts/host_bridge.py'
+      - 'studio*.py'
+      - 'skills/soundmaker-dubbing/**'
+      - 'tests/**'
+      - 'web/tests/test_config_editor.py'
+      - '.github/workflows/platform-basics.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-basics:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+        python: ['3.11', '3.13']
+    env:
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Offline setup, core and delivery regression
+        run: >-
+          python -X utf8 -m unittest
+          tests.unit.test_macos_setup
+          tests.unit.test_media_wav_fallback
+          tests.unit.test_runtime_location
+          tests.unit.test_claude_app
+          tests.unit.test_claude_host_setup
+          tests.unit.test_claude_install
+          tests.unit.test_host_bridge
+          tests.unit.test_host_bridge_protocol
+          tests.unit.test_host_bridge_tasks
+          tests.unit.test_claude_cowork_link
+          tests.unit.test_v16
+          tests.unit.test_studio_reopen
+          tests.unit.test_voice_selection_skill
+          tests.unit.test_voice_selection_entry
+          tests.integration.test_voice_selection
+          tests.integration.test_cowork_task
+          tests.integration.test_claude_host_bridge
+          tests.integration.test_host_bridge_protocol
+          tests.integration.test_cowork_http.CoworkHTTP.test_http_save_returns_answer_to_original_waiter_without_synthesis
+          tests.integration.test_performance_plan
+          tests.integration.test_project_files
+          tests.integration.test_final_delivery
+          -q
+      - name: Configuration editor HTTP regression (fake editor only)
+        run: python -X utf8 web/tests/test_config_editor.py

@@ -6,7 +6,8 @@
 
 | 当前宿主 | 只读这一份 |
 |---|---|
-| Claude Code | [Claude](harnesses/claude.md) |
+| Claude Code / Claude App 的 Code 本地会话 | [Claude Code](harnesses/claude.md) |
+| Claude App 的 Cowork 会话 | [Claude Cowork](harnesses/claude-cowork.md) |
 | Codex | [Codex](harnesses/codex.md) |
 | WorkBuddy | [WorkBuddy](harnesses/workbuddy.md) |
 | Kimi Work | [Kimi](harnesses/kimi.md) |
@@ -14,11 +15,13 @@
 
 进程、后台任务、等待与原会话通知按该宿主说明；共用恢复确有需要才查 [恢复索引](harness-resume.md)，不因此读取其他宿主。用户不负责启动终端、选端口或查任务 ID。
 
+Claude App 普通聊天不因应用名相同而读取 Code/Cowork 两份说明；先核对是否实际具备本地命令和文件访问能力，缺少时说明项目流程尚不可执行，不在云端创建指向本机的假绑定页。
+
 ## 按当前任务决定网页入口
 
 用户说“先等一下/先看网页”立即暂停生成推进，不继续 propose/ask/执行原授权。已有明确任务和角色时，“重新打开网页/文件”默认打开当前绑定任务，显示角色及已有值，允许继续修改；不要误路由到空角色的项目声音库。只有明确要管理项目声音库或确实无当前任务时，才省略 question。
 
-在运行时工作目录执行（占位值换真实值）：
+Cowork 按已选宿主说明调用主机 MCP，不执行下面的 VM/本地 CLI；主机工具已返回的真实 Answer 直接沿用，不跨环境执行配方 C。以下命令用于其他说明确认能在同一运行时启动的宿主（占位值换真实值）：
 
 ```text
 python -m makesound.studio_session --project "<absolute-project-path>" --question "<current-question-id>" --ui-language zh-CN

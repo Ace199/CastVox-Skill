@@ -7,7 +7,33 @@ import socket
 import subprocess
 import uuid
 
-from .errors import require
+from .errors import MakeSoundError, require
+
+
+def connection_status(surface):
+    """Check only this command's inherited identity; never connect or discover chats."""
+    require(surface in {'code', 'cowork', 'chat'}, 'invalid_surface', 'Select code, cowork, or chat.')
+    result = {'surface': surface, 'receiver_verified': False}
+    if surface == 'chat':
+        return {**result, 'status': 'unsupported_surface',
+                'code': 'harness_unavailable',
+                'message': 'This native adapter requires a locally executing agent with its own inherited messaging identity. '
+                           'A skill link or MCP connection does not establish chat notification support.'}
+    try:
+        target = environment_target()
+        require(target is not None, 'harness_unavailable',
+                'This command inherited no native messaging identity. Cowork may not provide this transport. '
+                'Do not borrow another session identity. Saved bindings remain available.')
+    except MakeSoundError as error:
+        result.update(status='unavailable', code=error.code, message=str(error))
+        if (surface == 'cowork' and not os.environ.get('CLAUDE_CODE_MESSAGING_SOCKET')
+                and not os.environ.get('CLAUDE_CODE_MESSAGING_TOKEN')):
+            result.update(alternative_transport='pending_tool_result', completion_mode='tool-result',
+                          requires_pending_tool_call=True)
+        return result
+    return {**result, 'status': 'available',
+            'transport': 'named_pipe' if os.name == 'nt' else 'unix_socket',
+            'message': 'Inherited messaging identity is available. Receiver acceptance and model continuation remain unverified.'}
 
 
 def environment_target():
@@ -65,3 +91,16 @@ def send(target, message):
             connection.sendall(lines.encode('utf-8'))
     # The native stream does not acknowledge delivery or inbound permission decisions.
     return {'status': 'sent_unconfirmed', 'message_id': message_id}
+
+
+def main(argv=None):
+    import argparse
+    parser = argparse.ArgumentParser(description='Check the current Claude session without connecting, sending, or exposing credentials.')
+    parser.add_argument('--surface', required=True, choices=('code', 'cowork', 'chat'))
+    result = connection_status(parser.parse_args(argv).surface)
+    print(json.dumps(result, ensure_ascii=False))
+    return 0 if result['status'] == 'available' else 2
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

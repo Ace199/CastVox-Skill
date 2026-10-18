@@ -30,6 +30,10 @@ def locate(skill_dir=None, install_record=None):
 
 
 def main():
+    if sys.version_info < (3, 11):
+        print(json.dumps({'status': 'error', 'code': 'python_unsupported',
+                          'message': 'Use a Python 3.11+ interpreter; macOS may require python3 or the project virtual environment.'}))
+        return 2
     try:
         result = {'status': 'ready', 'runtime_root': str(locate()),
                   'python_executable': sys.executable}

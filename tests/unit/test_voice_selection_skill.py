@@ -4,6 +4,17 @@ from tests.helpers import ROOT
 
 
 class VoiceSelectionSkill(unittest.TestCase):
+    def test_cowork_web_binding_uses_host_tools_without_vm_fallback(self):
+        refs = ROOT / 'skills/soundmaker-dubbing/references'
+        host = (refs / 'harnesses/claude-cowork.md').read_text(encoding='utf-8')
+        for name in ('soundmaker_host_status', 'soundmaker_prepare_binding', 'soundmaker_open_binding',
+                     'soundmaker_read_binding', 'soundmaker_wait_binding', 'soundmaker_smoke_binding'):
+            self.assertIn(name, host)
+        self.assertIn('不能自行回退到 VM', host)
+        self.assertNotIn('uv python install', host)
+        self.assertIn('不跨环境执行配方 C', (refs/'studio.md').read_text(encoding='utf-8'))
+        self.assertIn('不在 VM 再执行下方命令', (refs/'workflow-api.md').read_text(encoding='utf-8'))
+
     def test_fixed_defaults_final_delivery_and_native_tool_evidence_are_explicit(self):
         root = ROOT / 'skills/soundmaker-dubbing'
         skill = (root / 'SKILL.md').read_text(encoding='utf-8')
@@ -30,7 +41,7 @@ class VoiceSelectionSkill(unittest.TestCase):
                 self.assertIn('选项 3', text)
                 self.assertNotIn('主 Skill 第 0 节', text)
                 self.assertNotIn("The main Skill's recipe D", text)
-        for host in ('claude','codex','kimi','doubao','workbuddy'):
+        for host in ('claude','claude-cowork','codex','kimi','doubao','workbuddy'):
             with self.subTest(host=host):
                 text = (refs/f'harnesses/{host}.md').read_text(encoding='utf-8')
                 self.assertIn('选项 1/2', text)

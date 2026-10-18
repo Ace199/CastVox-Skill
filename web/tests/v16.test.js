@@ -216,6 +216,16 @@ test('WorkBuddy managed task handoff does not claim a desktop message was delive
   assert.doesNotMatch(store.getState().message, /已向原聊天发送|已确认.*投递/);
 });
 
+test('Cowork pending tool receipt distinguishes saving from conversation continuation', async () => {
+  const { store, api, controller } = await setup();
+  for (const role of store.getState().roles) { store.selectRole(role.id); store.assign('pv_001'); }
+  api.submitAnswer = async () => ({ session_complete: true, wake: { status: 'awaiting_tool' } });
+  await controller.submit();
+  assert.match(store.getState().message, /等待原 Cowork 命令领取/);
+  assert.match(store.getState().message, /尚未确认会话继续/);
+  assert.doesNotMatch(store.getState().message, /WorkBuddy|已向原聊天发送|已确认.*投递/);
+});
+
 test('completion confirms changed defaults then saves before submitting latest revision', async () => {
   const { store, api, controller } = await setup(); const calls = [];
   const save = api.saveDefaults;

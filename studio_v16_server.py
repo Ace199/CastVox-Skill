@@ -44,7 +44,14 @@ class Handler(StaticHandler):
     def _failure(self, exc):
         code = exc.code if isinstance(exc, MakeSoundError) else "invalid_request"
         status = 403 if code == "forbidden" else 409 if code in {"revision_conflict", "answer_immutable"} else 404 if code == "not_found" else 400
-        self._json({"error": code, "message": "Request was rejected; reload configuration or repair the indicated field."}, status)
+        if urlsplit(self.path).path.startswith('/api/host-bridge/v1/'):
+            from host_bridge import BridgeError
+            from host_bridge.protocol import error_result
+            self._json(error_result(BridgeError(code, 'Request rejected; inspect the protocol fields.'),
+                                    {'protocol_version': '1.0'}, task_id=self.server.question_id,
+                                    application='soundmaker'), status)
+        else:
+            self._json({"error": code, "message": "Request was rejected; reload configuration or repair the indicated field."}, status)
         # A rejected POST may still have unread bytes (including a dishonest
         # Content-Length). Closing immediately can reset TCP on Windows and lose
         # the error response. Send FIN first and drain only a bounded amount/time.
@@ -88,6 +95,8 @@ class Handler(StaticHandler):
         try:
             self._guard()
             require(not urlsplit(self.path).query, "invalid_request", "API query parameters are not supported.")
+            if path == '/api/host-bridge/v1/task' and getattr(self.server, 'bridge_api', None):
+                return self._json(self.server.bridge_api.read())
             if path in {"/api/providers", "/api/v16/providers"}:
                 return self._json(self.server.backend.providers())
             if path == "/api/v16/state":
@@ -123,6 +132,17 @@ class Handler(StaticHandler):
             body = json.loads(self.rfile.read(length).decode("utf-8"), object_pairs_hook=_pairs,
                               parse_constant=lambda _: (_ for _ in ()).throw(ValueError()))
             path = urlsplit(self.path)
+            if path.path == '/api/host-bridge/v1/submit' and not path.query and getattr(self.server, 'bridge_api', None):
+                try:
+                    return self._json(self.server.bridge_api.submit(body))
+                except Exception as error:
+                    from host_bridge import BridgeError
+                    from host_bridge.protocol import error_result
+                    if not isinstance(error, BridgeError):
+                        error = BridgeError('invalid_request', 'Submission rejected; inspect the protocol fields.')
+                    status = 409 if error.code in {'revision_conflict', 'submission_conflict', 'task_completed'} else 400
+                    return self._json(error_result(error, {'protocol_version': '1.0'}, task_id=self.server.question_id,
+                                                   application='soundmaker'), status)
             if path.path == '/api/providers/open-config' and not path.query:
                 from studio_config_editor import open_config
                 from makesound import validation as v

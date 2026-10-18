@@ -4,12 +4,15 @@
 
 | 当前宿主 | 对应说明 |
 |---|---|
-| Claude Code | [Claude](harnesses/claude.md) |
+| Claude Code / Claude App 的 Code 本地会话 | [Claude Code](harnesses/claude.md) |
+| Claude App 的 Cowork 会话 | [Claude Cowork](harnesses/claude-cowork.md) |
 | Codex | [Codex](harnesses/codex.md) |
 | WorkBuddy | [WorkBuddy](harnesses/workbuddy.md) |
 | Kimi Work | [Kimi](harnesses/kimi.md) |
 | 豆包 | [豆包](harnesses/doubao.md) |
 
 各宿主的启动、等待、通知状态和兼容性证据仅在对应文档维护，不从品牌、目录链接或 MCP 连接推断恢复能力。
+
+Cowork 使用主机 MCP：页面和项目在主机，完整 Answer 从原工具请求返回；不回 VM 执行通用 CLI 或配方 C。连接检查 ready、网页可用和原请求实际继续是三个独立验收状态。
 
 共用规则：先持久化 Answer，再尝试通知发起网页的原会话。通知只表示绑定保存，不代表演绎单确认或付费授权。当前任务有角色时携带 Question；启动器返回 revision 新 ID 时，事件与后续 Answer 读取以实际 ID 为准，原启动命令保留供会话归属核对。收到事件后按已读 Studio 的配方 C 核对并读取真实结果，检查已有试听，revision 比较变更，仅处理未完成或受影响内容，不强制重做试听。未知发送结果不盲目重试；失败时保留 Answer，提示回原聊天说“完成了”。管理模式没有待回答 Question 时只保存管理结果，不伪造恢复事件。

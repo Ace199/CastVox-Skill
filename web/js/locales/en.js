@@ -215,6 +215,7 @@ export default {
   "绑定已保存，WorkBuddy 已确认向原会话投递。请返回聊天查看；若未继续，发送“完成了”。": "Assignments saved. WorkBuddy confirmed delivery to the original conversation. Return to chat; if it does not continue, send “Done”.",
   "绑定已保存，但未确认自动通知成功。可以关闭此页面，回到原聊天发送“完成了”。": "Assignments saved, but automatic notification is unconfirmed. You can close this page and send “Done” in the original chat.",
   "绑定已保存，已交回 WorkBuddy 后台任务。请返回原聊天查看后续结果。": "Assignments saved and handed back to the WorkBuddy background task. Return to the original chat for results.",
+  "绑定已保存，等待原 Cowork 命令领取；尚未确认会话继续。": "Assignments saved, waiting for the original Cowork command to read them. Conversation continuation is not yet confirmed.",
   "绑定已保存，已向原聊天发送完成消息。可以关闭此页面，返回聊天查看演绎单。": "Assignments saved; completion message sent to the original chat. You can close this page and return to chat to view the performance sheet.",
   "绑定已保存，通知已写入原会话，但尚未确认 Claude 接收或回复。请返回原聊天查看；若未继续，发送“完成了”。": "Assignments saved; notification written to the original conversation, but Claude’s receipt or reply is unconfirmed. Return to the original chat; if it does not continue, send “Done”.",
   "绑定已完成，服务已断开，请关闭此页面": "Assignments complete; service disconnected. Close this page.",

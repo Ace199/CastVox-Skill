@@ -38,12 +38,21 @@ def _editable_question(core, question_id):
     return question_id
 
 
-def start(core, question_id=None, *, codex_thread=None, allow_fake=False, ui_language=None):
+def start(core, question_id=None, *, codex_thread=None, allow_fake=False, ui_language=None, completion_mode='auto'):
+    require(completion_mode in {'auto', 'tool-result'}, 'invalid_completion_mode', 'Select auto or tool-result completion.')
+    require(completion_mode != 'tool-result' or (question_id and not codex_thread),
+            'invalid_completion_mode', 'Tool-result completion needs a binding Question and cannot select a Codex chat.')
     language = resolve_ui_language(ui_language)
     launch_question_id = question_id
     question_id = _editable_question(core, question_id)
-    from .harness_resume import register_environment, environment_target
-    identity = environment_target(codex_thread, core=core, qid=launch_question_id) if question_id else None
+    from .harness_resume import register_environment, environment_target, register_tool_result
+    identity = ({'harness': 'tool_result'} if completion_mode == 'tool-result'
+                else environment_target(codex_thread, core=core, qid=launch_question_id)) if question_id else None
+    def register_current():
+        if completion_mode == 'tool-result':
+            register_tool_result(core, question_id)
+        else:
+            register_environment(core, question_id, codex_thread, discovery_question_id=launch_question_id)
     require(not identity or identity.get('harness') not in {'workbuddy_native', 'workbuddy_task'},
             'managed_launch_required',
             'WorkBuddy must run python -m makesound.studio_session as a managed background command, not a detached child.')
@@ -77,11 +86,11 @@ def start(core, question_id=None, *, codex_thread=None, allow_fake=False, ui_lan
             require(language is None or live.get('ui_language') == language, 'ui_language_mismatch',
                     'Existing Studio uses a different UI language. Change language in that window or close it before relaunching.')
             if question_id:
-                register_environment(core, question_id, codex_thread, discovery_question_id=launch_question_id)
+                register_current()
             return {k: v for k, v in saved.items() if k != 'launch_identity'}
 
     if question_id:
-        register_environment(core, question_id, codex_thread, discovery_question_id=launch_question_id)
+        register_current()
 
     server_script = Path(__file__).resolve().parent.parent / 'studio_v16_server.py'
     args = [_server_executable(), str(server_script), '--project', str(core.root)]
@@ -107,6 +116,10 @@ def start(core, question_id=None, *, codex_thread=None, allow_fake=False, ui_lan
                               'mode': 'binding' if question_id else 'management',
                               'source_question_id': Questions(core).read(question_id).get('source_question_id') if question_id else None,
                               'ui_language': language}
+                    if identity and identity.get('harness') in {'cowork_task', 'tool_result'}:
+                        result['completion_transport'] = 'pending_tool_result'
+                        result['wait_command'] = [sys.executable, '-X', 'utf8', '-m', 'makesound.cowork_task',
+                                                  '--project', str(core.root), '--question', question_id, '--timeout', '50']
                     record.write_text(json.dumps({**result, 'launch_identity': identity}), encoding='utf-8')
                     return result
             time.sleep(.1)
@@ -186,15 +199,18 @@ def main():
     parser.add_argument('--project', required=True)
     parser.add_argument('--question', help='Edit a task; answered tasks open a new binding version. Omit to view the project library.')
     parser.add_argument('--codex-thread', help='Exact originating chat UUID; defaults to CODEX_THREAD_ID')
+    parser.add_argument('--completion-mode', choices=('auto', 'tool-result'), default='auto',
+                        help='tool-result returns bindings through a waiting command; no native messaging identity is needed.')
     parser.add_argument('--ui-language', help='Chinese/English UI override (zh-CN or en); defaults to CASTVOX_UI_LANGUAGE handoff, then Chinese')
     args = parser.parse_args()
     try:
         if os.environ.get('WORKBUDDY_CONFIG_DIR'):
+            require(args.completion_mode == 'auto', 'managed_launch_required', 'Use WorkBuddy managed completion.')
             require(not args.codex_thread, 'session_mismatch', 'WorkBuddy cannot target a Codex chat.')
             result = serve_managed(ProjectCore(args.project), args.question, ui_language=args.ui_language)
         else:
             result = start(ProjectCore(args.project), args.question, codex_thread=args.codex_thread,
-                           ui_language=args.ui_language)
+                           ui_language=args.ui_language, completion_mode=args.completion_mode)
         print(json.dumps(result), flush=True)
         return 0
     except (MakeSoundError, OSError, TimeoutError) as exc:

@@ -36,6 +36,7 @@ local-demo/
 /docs/*
 !/docs/usage.md
 !/docs/architecture.md
+!/docs/host-bridge-integration.md
 *.prompt.txt
 *.log
 .DS_Store

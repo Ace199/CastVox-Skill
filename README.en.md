@@ -2,9 +2,9 @@
 
 **Turn a script into editable dialogue and narration with your AI agent. Compare voices first, then produce the audio.**
 
-CastVox is a local-first **agent skill for text-to-speech (TTS), voiceovers, and multi-character dubbing**. Its project workflow uses MiniMax CN and works with local coding agents including Codex and Claude Code, with adapters for Kimi Work, Doubao Work, and WorkBuddy.
+CastVox is a local-first **agent skill for text-to-speech (TTS), voiceovers, and multi-character dubbing**. Its project workflow uses MiniMax CN and works with local coding agents including Codex and Claude Code, with adapters for Kimi Work, Doubao Work, and WorkBuddy. Claude App Cowork supports host-side web binding and continuation of a pending request; its bridge currently exposes no synthesis tool.
 
-[简体中文](README.md) · [Quick start](#quick-start) · [Example workflow](#example-workflow) · [Compatibility](#compatibility) · [Report an issue](https://github.com/Ace199/CastVox-Skill/issues)
+[简体中文](README.md) · [Quick start](#quick-start) · [Example workflow](#example-workflow) · [Compatibility](#compatibility) · [Generic host bridge](#generic-host-bridge) · [Report an issue](https://github.com/Ace199/CastVox-Skill/issues)
 
 ![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![Voice provider: MiniMax](https://img.shields.io/badge/Voice-MiniMax-4055C8)
@@ -68,7 +68,9 @@ MiniMax lists available voices; the agent performs the character matching. Recom
 
 ## Quick start
 
-For the project voice workflow, you need a local-command-capable agent, **Python 3.11+**, and a working **MiniMax CN API configuration**. Most live host verification has been on Windows.
+For the project voice workflow, you need a local-command-capable agent, **Python 3.11+**, and a working **MiniMax CN API configuration**. Most live host verification has been on Windows. macOS configuration opening, Python checks, and existing FFmpeg discovery now have basic support; full live host resumption on Mac remains unverified.
+
+On macOS, use a Python 3.11+ python3 or virtual-environment interpreter. See the [macOS setup guide](docs/usage.md#macos-基础安装与配置) (Chinese) for symlink installation and configuration. The PowerShell example below is for Windows.
 
 ### 1. Clone the repository
 
@@ -92,6 +94,14 @@ New-Item -ItemType Junction -Path (Join-Path $skillParent 'soundmaker-dubbing') 
 ```
 
 Claude Code uses `~/.claude/skills`; WorkBuddy uses `~/.workbuddy/skills`. Kimi/Doubao paths depend on the host version. Check and back up existing installations before replacing them. The [installation guide](docs/usage.md#安装为目录链接) includes host paths, runtime-location setup, and troubleshooting; this detailed guide is currently in Chinese.
+
+**Claude App Cowork: install the skill and host bridge together.** Run on the host from this repository:
+
+```text
+python -X utf8 -m makesound.claude_install
+```
+
+The installer links the skill, backs up the configuration, and registers the generic local MCP without manual JSON editing. It preserves other MCP entries and checks conflicts. Python 3.11+ is required; on macOS use the appropriate python3. Claude may still need a reconnect or restart. Automatic setup targets verified local storage layouts; see the [installation guide](docs/usage.md) for account selection and version limits. This Cowork integration currently supports binding rather than the full synthesis workflow.
 
 ### 3. Configure the voice service and try a script
 
@@ -127,6 +137,7 @@ The folder names above reflect the current documented layout. Changed emotion, v
 |---|---|
 | [Codex](skills/soundmaker-dubbing/references/harnesses/codex.md) | Original-chat wake-up has been observed; queued does not mean processing is complete. |
 | [Claude Code](skills/soundmaker-dubbing/references/harnesses/claude.md) | Binding recovery tested on Windows 2.1.295. |
+| [Claude App · Cowork](skills/soundmaker-dubbing/references/harnesses/claude-cowork.md) | Host-owned MCP binding pages and continuation of the original request verified with Fake voices in the Windows App. The bridge exposes no synthesis tool. |
 | [Kimi Work](skills/soundmaker-dubbing/references/harnesses/kimi.md) | Binding/resumption tested on Windows 3.2.8; regular Chat and standalone CLI are separate environments. |
 | [Doubao Work](skills/soundmaker-dubbing/references/harnesses/doubao.md) | Binding recovery tested on Windows 2.32.5; requires the current instance's local bridge configuration. |
 | [WorkBuddy](skills/soundmaker-dubbing/references/harnesses/workbuddy.md) | Managed waiting/return path implemented; full live desktop workflow still needs verification. |
@@ -135,11 +146,27 @@ The folder names above reflect the current documented layout. Changed emotion, v
 
 Host updates and permissions can affect resumption. Saved bindings remain available if a notification fails; return to the original conversation and say the binding is complete. Cross-platform and all-version recovery are not fully verified.
 
+## Generic host bridge
+
+After a user completes voice binding in the browser, Cowork can receive the saved result through its pending tool request and continue the original task. The page and project run on the host rather than inside Cowork's isolated VM.
+
+The bridge can also serve other skills: **the skill defines the workflow, an application adapter owns its UI and data, and the MCP routes tasks and results.** The generic core does not import SoundMaker or interpret characters and voices. A SoundMaker binding adapter and a standalone choice-form example are included; another application needs its own explicitly registered adapter.
+
+Application protocol **1.0** standardizes task results, browser submissions, and errors, with submission deduplication, revision checks, and persisted recovery. Business fields live in data. New calls declare protocol_version explicitly; existing unversioned MCP calls, binding pages, and saved data remain compatible.
+
+- [Integration guide: protocol, adapters, and skill examples](docs/host-bridge-integration.md) (Chinese)
+- [JSON Schema: results and browser submissions](schemas/host-bridge-v1.schema.json)
+- [Standalone form application without SoundMaker or voice providers](host_bridge/example.py)
+
+This continues a pending request; it does not wake a conversation that has ended or grant permission for paid synthesis. Windows Cowork binding and continuation have been observed in the app. Protocol 1.0 has automated coverage; live app checks of that protocol and full macOS host continuation remain separate verification steps.
+
 ## Questions and contributions
+
+**Does every skill installation need MCP?** No. Hosts that execute local commands keep their existing installation path. Cowork's host-side binding uses a local MCP, configured together with the skill by the installer above. Copying SKILL.md alone does not install the service.
 
 For a non-billable development walkthrough, FakeProvider exercises the local binding/recovery/delivery path with **test silence**, not real voice audio. Actual auditions and production calls use the configured provider and require the relevant authorization.
 
-[Usage guide](docs/usage.md) · [Architecture](docs/architecture.md) · [Voice Studio development](web/README.md) · [Issues](https://github.com/Ace199/CastVox-Skill/issues)
+[Usage guide](docs/usage.md) · [Architecture](docs/architecture.md) · [Bridge integration](docs/host-bridge-integration.md) · [Voice Studio development](web/README.md) · [Issues](https://github.com/Ace199/CastVox-Skill/issues)
 
 When reporting a problem, include your agent/version, the failing step, expected versus actual behavior, and redacted error details. Do not include API Keys, private receipts, or signed download URLs. Supporting technical documentation is currently primarily in Chinese.
 

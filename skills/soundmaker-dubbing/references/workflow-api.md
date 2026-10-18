@@ -6,6 +6,8 @@
 
 ## 运行时和目标项目
 
+下列配方中的 `python` 表示已确认的 Python 3.11+ 解释器，不强制要求 PATH 中存在名为 python 的命令。macOS 首次可用 python3，已有仓库虚拟环境则优先其 `bin/python`；定位后复用返回的 python_executable，不混用解释器。`python_unsupported` 只表示版本过低，不重新安装运行时、不扫描目录。基础 macOS 配置不代表各宿主自动通知已经通过 Mac 实测；只有实际打开网页才读当前宿主文档。
+
 已有本会话的运行时绝对路径和解释器时直接复用，不再定位。否则从本次 Skill/Read 返回的加载路径取得 skill 目录，仅运行一次（可从任意 cwd 执行，无需先导入 makesound）：
 
 ```text
@@ -18,7 +20,7 @@ python -X utf8 "<当前已加载 skill 目录>/scripts/runtime_location.py"
 
 ## 生成前检查与冻结/导出入口
 
-生成授权前若本任务没有有效检查结果，执行一次 `python -m makesound.media`；环境和格式要求不变时沿用结果，不因换批次或打开另一个 reference 重跑：复用 PATH / 当前用户 WinGet 中现有 FFmpeg。`wav_only` 可保存、检查和拼接匹配的单声道 16-bit PCM WAV、追加静音、导出 SRT；MP3/重采样需要外部工具，冻结前说明限制并选格式。禁止自动下载、安装或修改全局 PATH，冻结后不静默改格式。
+生成授权前若本任务没有有效检查结果，执行一次 `python -m makesound.media`；环境和格式要求不变时沿用结果，不因换批次或打开另一个 reference 重跑：优先复用 PATH 中的 FFmpeg；Windows 额外核对已有 WinGet，macOS 额外核对 /opt/homebrew/bin 和 /usr/local/bin 中的可执行配对，不调用包管理器。媒体检查同时返回解释器、Python 版本与平台；python_unsupported 时先选择 Python 3.11+。`wav_only` 可保存、检查和拼接匹配的单声道 16-bit PCM WAV、追加静音、导出 SRT；MP3/重采样需要外部工具，冻结前说明限制并选格式。禁止自动下载、安装或修改全局 PATH，冻结后不静默改格式。
 
 ```text
 python -m makesound.production plan --project "<project>" --performance-plan "<confirmed-plan-id>"
@@ -70,6 +72,8 @@ python -X utf8 -m makesound.offline_harness prepare --project "<project>" --mani
 ### C. 绑定完成后读取原结果
 
 当前 Question 使用最近一次启动/保存实际返回的 ID；改绑后用新版本，旧 source_question_id 仅用于追溯。已读该 Answer 且未变化时沿用返回值，不为满足本配方再次读取。
+
+Cowork 主机桥接的 wait/read 工具已返回完整真实 Answer 时，即完成本配方；不在 VM 再执行下方命令读取主机项目，也不改写主机路径。桥接缺少的后续执行入口应报告缺口，不在 VM 重建任务冒充同一项目。具体工具只在网页阶段的当前宿主说明维护。
 
 ```text
 python -X utf8 -c "import sys,json; from makesound.core_v16 import ProjectCore; from makesound.questions import Questions; print(json.dumps(Questions(ProjectCore(sys.argv[1])).read(sys.argv[2]),ensure_ascii=False))" "<project>" "<question_id>"

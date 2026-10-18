@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 
 
 def config_path(provider, config_dir=None):
@@ -14,6 +15,15 @@ def config_path(provider, config_dir=None):
 
 
 def launch_editor(path):
+    if sys.platform == 'darwin':
+        # Force a text editor rather than the file's arbitrary JSON association.
+        # open returns after LaunchServices accepts the request, not after editing.
+        try:
+            subprocess.run(['/usr/bin/open', '-t', str(path.resolve())],
+                           check=True, capture_output=True, timeout=10)
+        except (OSError, subprocess.SubprocessError):
+            raise OSError('The macOS text editor could not be opened.') from None
+        return
     if os.name != 'nt':
         raise OSError('unsupported platform')
     # Explicit text editor: never execute a JSON file through its association.

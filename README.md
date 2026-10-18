@@ -4,13 +4,13 @@
 
 A local-first agent skill for multi-character text-to-speech (TTS), AI voiceovers, and dialogue dubbing with MiniMax.
 
-[English](README.en.md) · [快速开始](#快速开始) · [看看怎么用](#看看怎么用) · [支持的应用](#支持的应用) · [安装与配置](docs/usage.md) · [反馈问题](https://github.com/Ace199/CastVox-Skill/issues)
+[English](README.en.md) · [快速开始](#快速开始) · [看看怎么用](#看看怎么用) · [支持的应用](#支持的应用) · [通用网页桥接](#通用网页桥接) · [安装与配置](docs/usage.md) · [反馈问题](https://github.com/Ace199/CastVox-Skill/issues)
 
 ![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![Voice provider: MiniMax](https://img.shields.io/badge/Voice-MiniMax-4055C8)
 ![Local-first](https://img.shields.io/badge/Workflow-Local--first-2D7A65)
 
-适用于 **Codex、Claude Code、Kimi Work、豆包工作**等可执行本地命令的 Agent。真实语音生成已接入 **MiniMax CN**；主要实机验证环境为 Windows。
+完整配音流程适用于 **Codex、Claude Code、Kimi Work、豆包工作**等可执行本地命令的 Agent。**Claude App Cowork** 已接入主机网页绑定与原请求继续，当前桥接不提供语音合成。真实语音生成已接入 **MiniMax CN**；主要实机验证环境为 Windows；已增加 [macOS 基础配置](docs/usage.md#macos-基础安装与配置)，完整宿主自动续跑仍待 Mac 验收。
 
 ## 为什么用 CastVox？
 
@@ -72,6 +72,8 @@ Agent：本地调整段间停顿，另存新版本，保留原版。
 
 项目音色路径需要：**可执行本地命令的 Agent、Python 3.11+、可用的 MiniMax CN API 配置**。真实语音生成由服务商计费，配置和入库本身不生成音频。
 
+macOS 使用 Python 3.11+ 的 python3 或虚拟环境解释器；安装、符号链接和配置编辑见 [Mac 基础安装](docs/usage.md#macos-基础安装与配置)。不要直接在 Mac 执行下方 PowerShell 命令。
+
 ### 1. 克隆仓库
 
 ```powershell
@@ -94,6 +96,14 @@ New-Item -ItemType Junction -Path (Join-Path $skillParent 'soundmaker-dubbing') 
 ```
 
 Claude Code、Kimi Work、豆包工作和 WorkBuddy 的路径与运行时定位设置见 [完整安装说明](docs/usage.md#安装为目录链接)。已有同名目录先核对并备份，不覆盖。
+
+**Claude App Cowork：一次安装 skill 与桥接。** 在主机上的仓库目录执行：
+
+```text
+python -X utf8 -m makesound.claude_install
+```
+
+自动连接 skill、备份配置并登记通用主机 MCP，无需手填 JSON；已有配置会检查冲突，其他 MCP 保留。需 Python 3.11+，macOS 使用对应 python3；配置后可能仍需重连或重开 App。自动安装针对已验证的本地存储布局，多账号与其他版本见[安装说明](docs/usage.md#一次安装-skill-与主机桥接)。此入口当前用于绑定，不提供完整配音生成。
 
 ### 3. 配置服务，开始第一段配音
 
@@ -129,13 +139,32 @@ Agent 会按需创建或打开 `~/.config/minimax/config.json`。**API Key 留�
 |---|---|
 | [Codex](skills/soundmaker-dubbing/references/harnesses/codex.md) | 已有原聊天唤醒记录；队列接收不等于模型已完成处理 |
 | [Claude Code](skills/soundmaker-dubbing/references/harnesses/claude.md) | Windows 2.1.295 已有绑定恢复记录 |
+| [Claude App · Cowork](skills/soundmaker-dubbing/references/harnesses/claude-cowork.md) | 主机常驻 MCP 的网页 Fake 绑定与原请求继续已在 Windows App 实测；桥接不提供合成 |
 | [Kimi Work](skills/soundmaker-dubbing/references/harnesses/kimi.md) | Windows 3.2.8 已有绑定与原会话续跑记录；不等同普通 Chat/独立 CLI |
 | [豆包工作](skills/soundmaker-dubbing/references/harnesses/doubao.md) | Windows 2.32.5 已有绑定恢复记录，依赖当前实例和桥接配置 |
 | [WorkBuddy](skills/soundmaker-dubbing/references/harnesses/workbuddy.md) | 等待与返回机制已实现，真实桌面完整流程待验收 |
 
 同一份 skill 共用配音流程。宿主升级和权限变化可能影响恢复；通知失败时绑定仍会保存，可回原对话说“完成了”继续。macOS/Linux 及不同版本的完整宿主恢复尚未统一实测。
 
+## 通用网页桥接
+
+网页选好声音后，Cowork 可以通过仍在等待的工具请求取得保存结果，继续原任务。网页与项目由主机服务持有，无需在 Cowork 的隔离 VM 中启动服务器。
+
+这套桥接也可以供其他 Skill 接入：**Skill 决定业务流程，应用适配器负责网页与数据，MCP 负责启动任务、等待和返回结果。** 通用核心不依赖 SoundMaker，不读取角色或音色字段。当前交付了 SoundMaker 绑定适配器和独立的普通表单参考应用；新应用需要实现并登记自己的适配器。
+
+协议 **1.0** 统一任务结果、网页提交和错误格式，支持提交去重、版本冲突检查、持久化恢复；业务字段放在 data 中。新调用显式声明 protocol_version，旧 MCP 输出、原绑定网页与已保存数据保持兼容。
+
+- [接入文档：协议、适配器与 Skill 调用示例](docs/host-bridge-integration.md)
+- [JSON Schema：结果与网页提交校验](schemas/host-bridge-v1.schema.json)
+- [独立表单示例：不加载 SoundMaker 或语音服务](host_bridge/example.py)
+
+桥接返回当前等待请求，不负责唤醒已结束的对话。网页完成也不代表授权付费生成。Windows Cowork 的绑定与原请求继续已有实机验证；新增协议 1.0 有自动化覆盖，App 新协议实测与完整 Mac 宿主续跑仍需分别验收。
+
 ## 常见问题
+
+**安装 Skill 都需要配置 MCP 吗？**
+
+本地命令方式运行的宿主继续使用原安装流程。Cowork 的主机网页绑定需要本地 MCP，可通过上面的一次安装命令一起配置；只复制 SKILL.md 不会自动安装服务。
 
 **是否必须打开厂商网站选声？**
 
@@ -155,7 +184,7 @@ Agent 会按需创建或打开 `~/.config/minimax/config.json`。**API Key 留�
 
 ## 文档与反馈
 
-[安装和配置](docs/usage.md) · [架构与开发](docs/architecture.md) · [Voice Studio](web/README.md) · [English](README.en.md)
+[安装和配置](docs/usage.md) · [架构与开发](docs/architecture.md) · [桥接接入协议](docs/host-bridge-integration.md) · [Voice Studio](web/README.md) · [English](README.en.md)
 
 欢迎带着你的场景来 [提问或报告问题](https://github.com/Ace199/CastVox-Skill/issues)：使用的 Agent 与版本、所处步骤、期望与实际结果，以及脱敏错误信息，能帮助复现。请勿附上 API Key、私有收据或签名下载链接。
 

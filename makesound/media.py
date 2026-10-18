@@ -3,11 +3,17 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import wave
 from pathlib import Path
 
 from .errors import MakeSoundError, require
 from .storage import reject_links
+
+
+def _macos_media_dirs():
+    # Fixed existing Homebrew locations only; do not invoke brew or scan disks.
+    return (Path('/opt/homebrew/bin'), Path('/usr/local/bin'))
 
 
 class MediaTools:
@@ -16,7 +22,13 @@ class MediaTools:
         self.ffprobe = ffprobe or shutil.which('ffprobe')
         # Some managed hosts deliberately omit the user's PATH. Reuse the
         # existing per-user WinGet package without installing or changing PATH.
-        if os.name == 'nt' and not ffmpeg and not ffprobe and not self.available:
+        if sys.platform == 'darwin' and not ffmpeg and not ffprobe and not self.available:
+            for binary_dir in _macos_media_dirs():
+                pair = binary_dir / 'ffmpeg', binary_dir / 'ffprobe'
+                if all(path.is_file() and os.access(path, os.X_OK) for path in pair):
+                    self.ffmpeg, self.ffprobe = map(str, pair)
+                    break
+        elif os.name == 'nt' and not ffmpeg and not ffprobe and not self.available:
             packages = Path.home() / 'AppData/Local/Microsoft/WinGet/Packages'
             try:
                 for binary_dir in sorted(packages.glob('Gyan.FFmpeg_*/ffmpeg*/bin'), reverse=True):
@@ -29,7 +41,9 @@ class MediaTools:
 
     @property
     def available(self):
-        return bool(self.ffmpeg and self.ffprobe and Path(self.ffmpeg).is_file() and Path(self.ffprobe).is_file())
+        return bool(self.ffmpeg and self.ffprobe
+                    and all(Path(path).is_file() and (os.name == 'nt' or os.access(path, os.X_OK))
+                            for path in (self.ffmpeg, self.ffprobe)))
 
     def require_available(self):
         require(self.available,
@@ -103,12 +117,18 @@ class MediaTools:
 
 def main():
     """Offline discovery only: no provider configuration, network or installs."""
+    python = {'python_executable': sys.executable, 'python_version': '.'.join(map(str, sys.version_info[:3])),
+              'python_supported': sys.version_info >= (3, 11), 'platform': sys.platform}
+    if not python['python_supported']:
+        print(json.dumps({'status': 'python_unsupported', **python, 'network_calls': 0, 'downloads': 0}))
+        return 2
     media = MediaTools()
-    print(json.dumps({'status': 'ready' if media.available else 'wav_only',
+    print(json.dumps({'status': 'ready' if media.available else 'wav_only', **python,
                       'ffmpeg': media.ffmpeg, 'ffprobe': media.ffprobe,
                       'pcm_wav': True, 'mp3_and_resampling': media.available,
                       'network_calls': 0, 'downloads': 0}))
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())

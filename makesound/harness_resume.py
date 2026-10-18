@@ -26,11 +26,13 @@ def register_environment(core, qid, codex_thread=None, *, discovery_question_id=
 def environment_target(codex_thread=None, *, core=None, qid=None):
     from .claude_native import environment_target as claude_target
     target = claude_target()
+    from .cowork_task import environment_target as cowork_target
+    cowork = cowork_target() if target is None else None
     thread = codex_thread or os.environ.get('CODEX_THREAD_ID')
     is_kimi = os.environ.get('KIMI_AGENT_CLIENT_ID') == 'kimiwork'
     is_workbuddy = bool(os.environ.get('WORKBUDDY_CONFIG_DIR'))
     is_doubao = bool(os.environ.get('DOUBAO_OFFICE_APP_ID'))
-    require(sum(bool(value) for value in (target, thread, is_kimi, is_workbuddy, is_doubao)) <= 1,
+    require(sum(bool(value) for value in (target, cowork, thread, is_kimi, is_workbuddy, is_doubao)) <= 1,
             'session_mismatch', 'Multiple harness identities are present; use the originating harness environment.')
     if is_doubao:
         from .doubao_resume import environment_target as doubao_target
@@ -43,10 +45,17 @@ def environment_target(codex_thread=None, *, core=None, qid=None):
         return kimi_target(core, qid)
     if target:
         return target
+    if cowork:
+        return cowork
     if thread:
         require(str(uuid.UUID(thread)) == thread, 'invalid_thread', 'Expected an exact Codex thread UUID.')
         return {'harness': 'codex', 'thread_id': thread}
     return None
+
+
+def register_tool_result(core, qid):
+    """Explicit pending-tool handoff; no claim of a discoverable chat identity."""
+    _register_target(core, qid, {'harness': 'tool_result', 'question_id': qid})
 
 
 def register(core, qid, thread_id):
@@ -116,6 +125,9 @@ def notify(core, qid):
                 state.update(send(target, message))
             elif target['harness'] == 'workbuddy_task':
                 from .workbuddy_task import complete
+                state.update(complete(target, message))
+            elif target['harness'] in {'cowork_task', 'tool_result'}:
+                from .cowork_task import complete
                 state.update(complete(target, message))
             elif target['harness'] == 'workbuddy_native':
                 # Engine-only replies do not open a desktop request. Do not retry
