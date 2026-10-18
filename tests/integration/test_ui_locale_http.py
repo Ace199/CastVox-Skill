@@ -43,6 +43,7 @@ class LocaleHTTP(Fixture, unittest.TestCase):
             finally:
                 servers[0].shutdown()
         with patch.dict(os.environ, {'CASTVOX_UI_LANGUAGE': 'zh-CN'}, clear=True), \
+                patch('ssl._create_default_https_context', side_effect=AssertionError('Local HTTP needs no SSL')), \
                 patch('studio_v16_server.create_server', side_effect=capture):
             result = serve_managed(core, qid, ui_language='en-GB', on_ready=ready,
                                    config_dir=self.root / 'providers')

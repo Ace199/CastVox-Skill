@@ -175,7 +175,7 @@ def serve_managed(core, question_id=None, *, allow_fake=False, on_ready=None, co
                       'pid': os.getpid(), 'once': bool(question_id), 'lifecycle': 'host_managed', 'ui_language': language,
                       'source_question_id': Questions(core).read(question_id).get('source_question_id') if question_id else None,
                       'mode': 'binding' if question_id else 'management'}
-            opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+            opener = _local_http_opener()
             with opener.open(result['url'] + '/js/session.js', timeout=3) as response:
                 module = response.read().decode('utf-8')
             session = json.loads(module.split('Object.freeze(', 1)[1].rsplit(');', 1)[0])

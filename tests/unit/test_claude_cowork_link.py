@@ -1,4 +1,5 @@
 import json
+from contextlib import nullcontext
 import os
 from pathlib import Path
 import tempfile
@@ -61,8 +62,10 @@ class CoworkLink(unittest.TestCase):
         self.install()
         target = self.plugin / 'skills/soundmaker-dubbing'
         self.addCleanup(lambda: os.rmdir(target))
-        with patch.object(Path, 'is_junction', create=True):
-            delattr(Path, 'is_junction')
+        restore = patch.object(Path, 'is_junction') if hasattr(Path, 'is_junction') else nullcontext()
+        with restore:
+            if hasattr(Path, 'is_junction'):
+                delattr(Path, 'is_junction')
             self.assertEqual(self.install()['status'], 'already_linked')
 
     def test_wrong_plugin_and_manifest_conflicts_fail_before_linking(self):
