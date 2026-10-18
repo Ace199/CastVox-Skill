@@ -38,7 +38,7 @@ class StudioReopen(Fixture, unittest.TestCase):
         opener.open.side_effect = lambda *a, **k: io.BytesIO(('export const session = Object.freeze(' +
             json.dumps({'question_id':None,'ui_language':'zh-CN','project_id':core.read()['project_id']}) + ');').encode())
         with patch('makesound.studio_session.subprocess.Popen', side_effect=launch), \
-                patch('makesound.studio_session.urllib.request.build_opener', return_value=opener), \
+                patch('makesound.studio_session._local_http_opener', return_value=opener), \
                 patch('makesound.harness_resume.register_environment', side_effect=AssertionError('No fake task')), \
                 patch('makesound.harness_resume.environment_target', side_effect=AssertionError('No host notification')):
             result = start(core, ui_language='zh-CN')

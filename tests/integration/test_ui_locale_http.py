@@ -12,6 +12,16 @@ from studio_v16_server import create_server
 
 
 class LocaleHTTP(Fixture, unittest.TestCase):
+    def test_loopback_startup_does_not_depend_on_reverse_dns(self):
+        backend = StudioBackend(ProjectCore(self.a), config_paths={}, allow_fake=True)
+        with patch('socket.getfqdn', side_effect=AssertionError('Reverse DNS must not block local startup')):
+            server = create_server(backend)
+        try:
+            self.assertEqual(server.server_name, '127.0.0.1')
+            self.assertEqual(server.server_port, server.server_address[1])
+        finally:
+            server.server_close()
+
     def test_managed_launch_carries_explicit_language_to_session_and_record(self):
         from makesound.offline_harness import prepare
         from makesound.studio_session import serve_managed
@@ -47,7 +57,7 @@ class LocaleHTTP(Fixture, unittest.TestCase):
                 self.assertIsNone(server.ui_language)
             finally:
                 server.server_close()
-            with patch('studio_v16_server.ThreadingHTTPServer') as bind, self.assertRaises(MakeSoundError):
+            with patch('studio_v16_server.LoopbackHTTPServer') as bind, self.assertRaises(MakeSoundError):
                 create_server(backend, ui_language='en-<script>')
             bind.assert_not_called()
 

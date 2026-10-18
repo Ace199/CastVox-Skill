@@ -64,6 +64,7 @@ jobs:
           tests.unit.test_voice_selection_skill
           tests.unit.test_voice_selection_entry
           tests.integration.test_voice_selection
+          tests.integration.test_ui_locale_http
           tests.integration.test_cowork_task
           tests.integration.test_claude_host_bridge
           tests.integration.test_host_bridge_protocol

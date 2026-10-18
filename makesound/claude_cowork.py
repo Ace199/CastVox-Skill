@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import os
+import stat
 from pathlib import Path
 import subprocess
 import uuid
@@ -26,6 +27,15 @@ def _directory_link(source, target):
                             input=json.dumps({'source': str(source), 'target': str(target)}).encode('ascii'),
                             capture_output=True, timeout=15, creationflags=subprocess.CREATE_NO_WINDOW)
     require(result.returncode == 0, 'link_failed', 'Cannot create the local Cowork skill directory link.')
+
+
+def _is_junction(path):
+    # Path.is_junction was added in Python 3.12. The mount-point reparse tag
+    # identifies our Windows directory junctions on supported Python 3.11 too.
+    try:
+        return os.name == 'nt' and path.lstat().st_reparse_tag == stat.IO_REPARSE_TAG_MOUNT_POINT
+    except FileNotFoundError:
+        return False
 
 
 def link_skill(plugin_root, *, backup_dir=None):
@@ -50,8 +60,8 @@ def link_skill(plugin_root, *, backup_dir=None):
         entries = [item for item in manifest['skills'] if item.get('name') == 'soundmaker-dubbing']
         require(len(entries) <= 1 and all(item.get('creatorType') == 'user' and item.get('syncManaged') is False for item in entries),
                 'skill_conflict', 'Existing managed skill entry cannot be replaced by a local link.')
-        exists = target.exists() or target.is_symlink() or getattr(target, 'is_junction', lambda: False)()
-        require(not exists or ((target.is_symlink() or getattr(target, 'is_junction', lambda: False)())
+        exists = target.exists() or target.is_symlink() or _is_junction(target)
+        require(not exists or ((target.is_symlink() or _is_junction(target))
                                and target.resolve() == source.resolve()),
                 'skill_conflict', 'Existing skill directory or different link was preserved. Back it up explicitly before replacement.')
         public = {'skill_path': str(target), 'runtime_root': str(source.parent.parent),

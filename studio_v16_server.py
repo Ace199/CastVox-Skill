@@ -4,6 +4,7 @@ import hmac
 import json
 import secrets
 import socket
+from socketserver import TCPServer
 import time
 import threading
 from pathlib import Path
@@ -16,6 +17,14 @@ from makesound.studio_backend import StudioBackend
 from makesound.storage import _pairs
 from makesound.ui_locale import resolve_ui_language
 from studio_server import Handler as StaticHandler
+
+
+class LoopbackHTTPServer(ThreadingHTTPServer):
+    def server_bind(self):
+        # HTTPServer resolves a display name via getfqdn, which can block on
+        # system DNS. This numeric loopback server needs no name resolution.
+        TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
 
 
 class Handler(StaticHandler):
@@ -193,7 +202,7 @@ def create_server(backend, port=0, *, question_id=None, config_dir=None, close_a
     require(not close_after_answer or question_id, 'missing_roles', 'One-session mode requires a Question.')
     if question_id:
         backend.question(question_id)
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    server = LoopbackHTTPServer(("127.0.0.1", port), Handler)
     server.backend = backend
     server.session_token = secrets.token_urlsafe(32)
     server.csrf_token = secrets.token_urlsafe(32)

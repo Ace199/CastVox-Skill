@@ -89,7 +89,8 @@ class CoworkTask(HarnessResume):
             process.poll.return_value = None
             return process
         with patch.dict(os.environ, self.env(), clear=True), patch('makesound.studio_session.subprocess.Popen',
-                side_effect=launch), patch('urllib.request.OpenerDirector.open', return_value=io.BytesIO(module)):
+                side_effect=launch), patch('urllib.request.OpenerDirector.open', return_value=io.BytesIO(module)), \
+                patch('ssl._create_default_https_context', side_effect=AssertionError('Local HTTP needs no SSL')):
             result = start(self.core, self.qid)
         self.assertEqual(result['completion_transport'], 'pending_tool_result')
         command = result['wait_command']

@@ -38,6 +38,16 @@ def _editable_question(core, question_id):
     return question_id
 
 
+def _local_http_opener():
+    # Readiness probes use numeric loopback HTTP only. Avoid constructing the
+    # default HTTPS handler (and its platform SSL context) or following redirects.
+    opener = urllib.request.OpenerDirector()
+    for handler in (urllib.request.ProxyHandler({}), urllib.request.HTTPHandler(),
+                    urllib.request.HTTPDefaultErrorHandler(), urllib.request.HTTPErrorProcessor()):
+        opener.add_handler(handler)
+    return opener
+
+
 def start(core, question_id=None, *, codex_thread=None, allow_fake=False, ui_language=None, completion_mode='auto'):
     require(completion_mode in {'auto', 'tool-result'}, 'invalid_completion_mode', 'Select auto or tool-result completion.')
     require(completion_mode != 'tool-result' or (question_id and not codex_thread),
@@ -59,7 +69,7 @@ def start(core, question_id=None, *, codex_thread=None, allow_fake=False, ui_lan
     folder = core.managed_path(f'.makesound/studio/{question_id or "management"}')
     folder.mkdir(parents=True, exist_ok=True)
     record = folder / 'session.json'
-    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    opener = _local_http_opener()
 
     def check(url):
         with opener.open(url + '/js/session.js', timeout=2) as response:

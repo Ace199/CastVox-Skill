@@ -55,6 +55,16 @@ class CoworkLink(unittest.TestCase):
         self.assertEqual((target / 'SKILL.md').read_text(), 'user copy')
         self.assertEqual(json.loads(self.manifest.read_text()), self.original)
 
+    @unittest.skipUnless(os.name == 'nt', 'Windows junction compatibility')
+    def test_repeat_install_without_path_is_junction_api(self):
+        # Python 3.11 has no Path.is_junction; keep a real junction on disk.
+        self.install()
+        target = self.plugin / 'skills/soundmaker-dubbing'
+        self.addCleanup(lambda: os.rmdir(target))
+        with patch.object(Path, 'is_junction', create=True):
+            delattr(Path, 'is_junction')
+            self.assertEqual(self.install()['status'], 'already_linked')
+
     def test_wrong_plugin_and_manifest_conflicts_fail_before_linking(self):
         for mutation in ('plugin', 'entry'):
             with self.subTest(mutation=mutation):
