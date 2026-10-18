@@ -16,6 +16,39 @@ python -X utf8 -c "import json; from makesound.voice_selection_entry import conf
 
 若编辑器未能启动，按返回路径帮助用户打开，不声称已经打开。等待保存后重新执行 choices，摘要始终标记 authentication 为 not_verified。默认 supported_providers 只含 MiniMax，Agent 不得传入火山引擎来冒充已接入。
 
+### 未配置时必须附带的配置引导（跟随对话语言）
+
+检测到 MiniMax 未配置且用户已选择配置入口时，沿用上述创建/打开逻辑，在同一条聊天回复中附带以下说明；不能只报告配置文件路径。已有有效配置时不重复展示，也不重新创建/打开文件。JSON 模板中的英文 `_region_comment` 保留，聊天说明不替代模板注释。
+
+只维护这一份 Skill。配置引导使用用户当前对话的语言；用户明确指定回复语言时优先遵从。下方中文仅为内容示例，不要求逐字照搬。翻译时必须保留获取密钥链接、字段名、枚举值、API 地址、默认地域、地域匹配要求、当前国际版生成限制及密钥安全提示，不翻译机器字段和值。
+
+保存提示与确认也跟随同一语言：中文可提示回复“已保存”，英文可提示回复“Saved”；接受用户在当前配置步骤中明确表达已保存文件的等义回复，不要求固定口令或中文。仅表示理解、准备保存或提出问题不算已保存；仍须等待实际保存确认后检查配置。
+
+先按工具实际结果报告文件是新建还是已有、编辑器是否已请求启动，并提供返回的 `config_path`。仅新建且已请求启动编辑器时可说“已创建 MiniMax 配置文件，并请求使用本机文本编辑器打开”（Windows 可明确为记事本）；打开失败时说明失败并提供路径。随后说明：
+
+> 请先获取 MiniMax API Key，并将其填写到配置文件的 `api_key` 字段中。
+>
+> **获取 API Key：**
+> - 中国大陆：[MiniMax 国内开放平台](https://platform.minimaxi.com/user-center/basic-information/interface-key)
+> - 国际版：[MiniMax Global](https://www.minimax.io/platform/user-center/basic-information/interface-key)
+>
+> **地域配置说明：**
+>
+> | 平台地域 | 当前配置的 `region` 值 | API 地址 |
+> |---|---|---|
+> | 中国大陆 | `cn` | `https://api.minimaxi.com` |
+> | 国际版（Global） | `international` | `https://api.minimax.io` |
+>
+> API Key 必须与地域及 API 地址匹配，否则可能出现 `invalid api key` 错误。默认地域为 `cn`。当前版本的配置字段不接受 `global`，国际版使用 `international`，并需将 `base_url` 同时改为国际版地址；但当前配音适配器仅支持国内地域，国际版配置通过本地检查也不能继续生成。使用国际版密钥时，请先确认是否改用国内平台密钥，或等待国际版生成支持。
+>
+> API Key 仅填写在本机配置文件中，不要发送到聊天。
+>
+> **完成后保存文件，回复「已保存」**，我会检查配置，并在当前版本支持且配置完整时继续之前的配音任务。
+
+收到“已保存”、“Saved”或当前对话语言中明确表示已保存文件的等义确认后，重新执行 `choices` 检查安全摘要；未完整时只提示缺项，完整且地域受支持时恢复原任务，不重走选声流程、不扩大生成授权。此检查不证明线上鉴权成功，不能将 `authentication=not_verified` 说成已验证密钥。
+
+平台链接、地域地址和密钥匹配要求依据 [MiniMax 官方仓库](https://github.com/MiniMax-AI/MiniMax-MCP#quickstart-with-mcp-client)（核对：2026-10-18）；`cn` / `international` 的字段取值及国际版生成限制来自当前运行时契约，不把 Global 平台名称当作本地枚举值。
+
 ### 查询音色与推荐
 
 MiniMax `get_voice` 按类型列出音色，不按性格推荐。Agent 使用官方目录或当前账号结果核实名称、ID 和描述，再给出自己的匹配理由。公开目录可核实信息，但不能证明当前账号有权限；没有实时调用就标注未验证账号可用性。官方目录与接口链接只在实际需要核实时打开，不在开始任务时批量抓取。
