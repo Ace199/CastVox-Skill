@@ -11,6 +11,8 @@ description: Plan and produce dubbing for a supplied script with SoundMaker. Use
 
 把运行时当作已安装工具：日常配音不读源码、测试、Git 历史，不扫描仓库、枚举接口或重复安装环境。**普通配音遇到错误也不自动转为源码排查**；按 reference、必要时当前入口的帮助、脱敏错误和产物诊断，仍不能解决就报告接口缺口并保留结果。明确的开发请求才进入代码任务。
 
+MiniMax 凭据默认只从当前执行用户的 `~/.config/minimax/config.json` 读取，与运行时目录、目标项目和当前工作目录无关。不得搜索项目内的 `config.json`、`config.example.json` 或旧的 `minimax_sounds` 工具来判断是否已配置；不得要求把示例复制到项目内或重复填写已有密钥。检查、选声和生成沿用同一配置来源，具体检查入口见 [MiniMax](references/minimax.md)。
+
 **禁止预读**。已读且未变化的规则不重复读；链接是按需路由，不递归加载整条引用链。主 Skill 决定当前路径，reference 只补当前步骤的接口或能力说明：
 
 | 当前步骤 | 入口 |
